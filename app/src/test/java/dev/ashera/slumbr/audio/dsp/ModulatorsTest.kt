@@ -81,15 +81,15 @@ class ModulatorsTest {
         val peak = env.next()
         assertTrue("Peak should be 1.0 (peak=$peak)", peak == 1f)
 
-        // Release phase — should ramp down
+        // Release phase — should ramp down (199 remaining samples, positions 101-299)
         prev = peak
-        for (i in 1..200) {
+        for (i in 1..199) {
             val v = env.next()
             assertTrue("Release should ramp down (i=$i, prev=$prev, v=$v)", v <= prev)
             prev = v
         }
 
-        // After envelope completes
+        // After envelope completes (300 samples consumed: positions 0-299)
         assertTrue("Should be inactive after completion", !env.isActive)
         assertTrue("Should return 0 after completion", env.next() == 0f)
     }
@@ -98,7 +98,7 @@ class ModulatorsTest {
     fun `ArEnvelope can be retriggered`() {
         val env = ArEnvelope(attackSamples = 10, releaseSamples = 10)
         env.trigger()
-        repeat(21) { env.next() } // complete first envelope (10 attack + 10 release + 1)
+        repeat(20) { env.next() } // complete first envelope (10 attack + 10 release)
         assertTrue("Should be inactive", !env.isActive)
 
         env.trigger()

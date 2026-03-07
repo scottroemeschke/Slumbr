@@ -2,6 +2,7 @@ package dev.ashera.slumbr.audio.dsp
 
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -179,7 +180,7 @@ class BiquadFilter private constructor(
             gainDb: Float,
             sampleRate: Int,
         ): BiquadFilter {
-            val a = Math.pow(10.0, gainDb / 40.0).toFloat()
+            val a = 10.0.pow(gainDb / 40.0).toFloat()
             val w0 = 2f * PI.toFloat() * cutoffHz / sampleRate
             val sinW0 = sin(w0)
             val cosW0 = cos(w0)
@@ -200,7 +201,7 @@ class BiquadFilter private constructor(
             gainDb: Float,
             sampleRate: Int,
         ): BiquadFilter {
-            val a = Math.pow(10.0, gainDb / 40.0).toFloat()
+            val a = 10.0.pow(gainDb / 40.0).toFloat()
             val w0 = 2f * PI.toFloat() * cutoffHz / sampleRate
             val sinW0 = sin(w0)
             val cosW0 = cos(w0)

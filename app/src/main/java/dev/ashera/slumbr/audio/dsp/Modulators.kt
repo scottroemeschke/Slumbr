@@ -20,7 +20,7 @@ class Lfo(
 
     /** Returns next LFO value in [0, 1]. */
     fun next(): Float {
-        val value = (sin(2.0 * PI * phase).toFloat() + 1f) / 2f
+        val value = ((sin(2.0 * PI * phase).toFloat() + 1f) / 2f).coerceIn(0f, 1f)
         phase += frequencyHz / sampleRate
         if (phase >= 1f) phase -= 1f
         return value
@@ -44,15 +44,13 @@ class DriftModulator(
     sampleRate: Int,
 ) {
     private val filter = LowPassFilter(driftRateHz, sampleRate)
-    private var value = 0.5f
 
     /** Returns next drift value in [0, 1]. */
     fun next(): Float {
         val noise = Random.nextFloat() * 2f - 1f
         val filtered = filter.process(noise)
-        // Map filtered noise (roughly [-0.5, 0.5]) to [0, 1]
-        value = (filtered + 0.5f).coerceIn(0f, 1f)
-        return value
+        // Map filtered noise [-1, 1] to [0, 1]
+        return ((filtered + 1f) / 2f).coerceIn(0f, 1f)
     }
 }
 
@@ -66,6 +64,11 @@ class ArEnvelope(
     private val attackSamples: Int,
     private val releaseSamples: Int,
 ) {
+    init {
+        require(attackSamples > 0) { "attackSamples must be positive" }
+        require(releaseSamples > 0) { "releaseSamples must be positive" }
+    }
+
     private var position = 0
     private val totalSamples = attackSamples + releaseSamples
     private var active = false
@@ -88,7 +91,7 @@ class ArEnvelope(
                 1f - releasePos.toFloat() / releaseSamples
             }
         position++
-        if (position > totalSamples) {
+        if (position >= totalSamples) {
             active = false
         }
         return value.coerceIn(0f, 1f)
