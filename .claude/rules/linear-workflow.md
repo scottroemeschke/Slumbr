@@ -83,6 +83,10 @@ After a spec is approved via `spec-planner`:
 3. Move issue to **In Progress**
 4. Fetch latest main and create a fresh feature branch
 
+## After PR Merge
+
+When a PR is merged (by the user or otherwise), move all related Linear issues to **Done**. The GitHub↔Linear auto-close integration is not currently active, so this must be done manually via `save_issue` with `state: "Done"`.
+
 ## Risk-Driven Reviews Before PR
 
 | Security Risk | Technical Risk | Required Reviews |

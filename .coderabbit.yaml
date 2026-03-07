@@ -1,0 +1,41 @@
+language: "en-US"
+tone_instructions: "Be direct and concise. Skip filler. Focus on correctness, performance, and Android/Kotlin idioms."
+
+reviews:
+  profile: "assertive"
+  high_level_summary: false
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+  changed_files_summary: true
+  sequence_diagrams: true
+  request_changes_workflow: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    ignore_title_keywords:
+      - "WIP"
+      - "DO NOT MERGE"
+
+  tools:
+    detekt:
+      enabled: true
+    gitleaks:
+      enabled: true
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  opt_out: false
+  learnings:
+    scope: "auto"
+  issues:
+    scope: "auto"
+  pull_requests:
+    scope: "auto"
+  linear:
+    usage: "auto"
+    team_keys:
+      - "SLU"
