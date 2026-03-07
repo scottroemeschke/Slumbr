@@ -21,7 +21,7 @@ import kotlin.math.min
  */
 class AudioEngine {
     companion object {
-        const val SAMPLE_RATE = 44100
+        const val SAMPLE_RATE = 22050
         private const val FADE_IN_MS = 2000L
         private const val FADE_OUT_MS = 16000L
         private val FADE_IN_SAMPLES = (SAMPLE_RATE * FADE_IN_MS / 1000).toInt()
@@ -63,36 +63,7 @@ class AudioEngine {
         playbackJob?.cancel()
         audioTrack?.stop()
 
-        val minBufferBytes =
-            AudioTrack.getMinBufferSize(
-                SAMPLE_RATE,
-                AudioFormat.CHANNEL_OUT_MONO,
-                AudioFormat.ENCODING_PCM_FLOAT,
-            )
-        // At least 1 second of PCM float for stable playback without underruns
-        val oneSecondBytes = SAMPLE_RATE * Float.SIZE_BYTES
-        val bufferSizeBytes = maxOf(minBufferBytes, oneSecondBytes)
-
-        val track =
-            AudioTrack
-                .Builder()
-                .setAudioAttributes(
-                    AudioAttributes
-                        .Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build(),
-                ).setAudioFormat(
-                    AudioFormat
-                        .Builder()
-                        .setSampleRate(SAMPLE_RATE)
-                        .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
-                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                        .build(),
-                ).setBufferSizeInBytes(bufferSizeBytes)
-                .setTransferMode(AudioTrack.MODE_STREAM)
-                .build()
-
+        val track = buildAudioTrack()
         track.setVolume(volume)
         track.play()
         audioTrack = track
@@ -101,8 +72,9 @@ class AudioEngine {
         targetGain = 1f
         _fadeProgress.value = 0f
 
-        val chunkSize = SAMPLE_RATE / 10 // 100ms chunks
-        val buffer = FloatArray(chunkSize)
+        val chunkSize = SAMPLE_RATE // ~1 second chunks
+        val floatBuffer = FloatArray(chunkSize)
+        val pcmBuffer = ShortArray(chunkSize)
 
         playbackJob =
             scope.launch {
@@ -110,7 +82,9 @@ class AudioEngine {
 
                 var gen = generator
                 while (isActive && gen != null) {
-                    for (i in buffer.indices) {
+                    gen.fillBuffer(floatBuffer)
+
+                    for (i in floatBuffer.indices) {
                         currentGain =
                             when {
                                 currentGain < targetGain ->
@@ -119,11 +93,15 @@ class AudioEngine {
                                     max(currentGain - GAIN_DOWN_STEP, targetGain)
                                 else -> currentGain
                             }
-                        buffer[i] = gen.nextSample() * smoothstep(currentGain)
+                        pcmBuffer[i] =
+                            (floatBuffer[i] * smoothstep(currentGain) * Short.MAX_VALUE)
+                                .toInt()
+                                .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+                                .toShort()
                     }
 
                     _fadeProgress.value = currentGain
-                    track.write(buffer, 0, buffer.size, AudioTrack.WRITE_BLOCKING)
+                    track.write(pcmBuffer, 0, pcmBuffer.size, AudioTrack.WRITE_BLOCKING)
 
                     if (currentGain == 0f && targetGain == 0f) break
                     gen = generator
@@ -139,6 +117,37 @@ class AudioEngine {
                     onPlaybackComplete?.invoke()
                 }
             }
+    }
+
+    private fun buildAudioTrack(): AudioTrack {
+        val minBufferBytes =
+            AudioTrack.getMinBufferSize(
+                SAMPLE_RATE,
+                AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+            )
+        // ~3 seconds of 16-bit PCM for stable playback with large chunks
+        val threeSecondBytes = SAMPLE_RATE * Short.SIZE_BYTES * 3
+        val bufferSizeBytes = maxOf(minBufferBytes, threeSecondBytes)
+
+        return AudioTrack
+            .Builder()
+            .setAudioAttributes(
+                AudioAttributes
+                    .Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build(),
+            ).setAudioFormat(
+                AudioFormat
+                    .Builder()
+                    .setSampleRate(SAMPLE_RATE)
+                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                    .build(),
+            ).setBufferSizeInBytes(bufferSizeBytes)
+            .setTransferMode(AudioTrack.MODE_STREAM)
+            .build()
     }
 
     /**

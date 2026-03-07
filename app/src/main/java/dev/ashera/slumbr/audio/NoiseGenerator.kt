@@ -11,17 +11,16 @@ class NoiseGenerator(
     private val type: NoiseType,
 ) {
     // Brown noise state
-    private var brownLast = 0.0
+    private var brownLast = 0f
 
     // Pink noise state (Voss-McCartney algorithm, 8 octaves)
-    private val pinkOctaves = DoubleArray(8)
+    private val pinkOctaves = FloatArray(8)
     private var pinkCounter = 0
-    private var pinkRunningSum = 0.0
+    private var pinkRunningSum = 0f
 
     init {
-        // Initialize pink noise octaves
         for (i in pinkOctaves.indices) {
-            val value = Random.nextDouble(-1.0, 1.0)
+            val value = Random.nextFloat() * 2f - 1f
             pinkOctaves[i] = value
             pinkRunningSum += value
         }
@@ -37,6 +36,25 @@ class NoiseGenerator(
         return (raw * type.perceptualGain).coerceIn(-1f, 1f)
     }
 
+    /**
+     * Fill [buffer] with gain-adjusted samples. Avoids per-sample virtual dispatch
+     * by selecting the generation strategy once and looping internally.
+     */
+    fun fillBuffer(buffer: FloatArray) {
+        val gain = type.perceptualGain
+        when (type) {
+            NoiseType.WHITE -> for (i in buffer.indices) {
+                buffer[i] = (white() * gain).coerceIn(-1f, 1f)
+            }
+            NoiseType.PINK -> for (i in buffer.indices) {
+                buffer[i] = (pink() * gain).coerceIn(-1f, 1f)
+            }
+            NoiseType.BROWN -> for (i in buffer.indices) {
+                buffer[i] = (brown() * gain).coerceIn(-1f, 1f)
+            }
+        }
+    }
+
     private fun white(): Float = Random.nextFloat() * 2f - 1f
 
     private fun pink(): Float {
@@ -44,25 +62,25 @@ class NoiseGenerator(
         val k = Integer.numberOfTrailingZeros(pinkCounter)
         val octave = min(k, pinkOctaves.size - 1)
         pinkRunningSum -= pinkOctaves[octave]
-        val newValue = Random.nextDouble(-1.0, 1.0)
+        val newValue = Random.nextFloat() * 2f - 1f
         pinkOctaves[octave] = newValue
         pinkRunningSum += newValue
         pinkCounter++
 
         // Normalize: sum of 8 uniform [-1,1] has max magnitude 8
-        return (pinkRunningSum / pinkOctaves.size).toFloat()
+        return pinkRunningSum / pinkOctaves.size
     }
 
     private fun brown(): Float {
         // Brownian/red noise: integrated white noise with leaky integrator
-        brownLast += Random.nextDouble(-1.0, 1.0) * BROWN_STEP_SCALE
+        brownLast += (Random.nextFloat() * 2f - 1f) * BROWN_STEP_SCALE
         brownLast *= BROWN_LEAK_FACTOR
-        brownLast = brownLast.coerceIn(-1.0, 1.0)
-        return brownLast.toFloat()
+        brownLast = brownLast.coerceIn(-1f, 1f)
+        return brownLast
     }
 
     companion object {
-        private const val BROWN_STEP_SCALE = 0.02
-        private const val BROWN_LEAK_FACTOR = 0.998
+        private const val BROWN_STEP_SCALE = 0.02f
+        private const val BROWN_LEAK_FACTOR = 0.998f
     }
 }
