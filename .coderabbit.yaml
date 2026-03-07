@@ -42,6 +42,4 @@ knowledge_base:
   pull_requests:
     scope: "auto"
   linear:
-    usage: "enabled"
-    team_keys:
-      - "SLU"
+    usage: "disabled"
