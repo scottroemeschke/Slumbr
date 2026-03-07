@@ -27,12 +27,15 @@ class NoiseGenerator(
         }
     }
 
-    fun nextSample(): Float =
-        when (type) {
-            NoiseType.WHITE -> white()
-            NoiseType.PINK -> pink()
-            NoiseType.BROWN -> brown()
-        }
+    fun nextSample(): Float {
+        val raw =
+            when (type) {
+                NoiseType.WHITE -> white()
+                NoiseType.PINK -> pink()
+                NoiseType.BROWN -> brown()
+            }
+        return (raw * type.perceptualGain).coerceIn(-1f, 1f)
+    }
 
     private fun white(): Float = Random.nextFloat() * 2f - 1f
 

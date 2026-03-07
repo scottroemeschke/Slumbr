@@ -51,11 +51,18 @@ class SoundService : Service() {
     private val binder = LocalBinder()
     val audioEngine = AudioEngine()
 
+    /** Called when the service is stopped via notification (hard stop). */
+    var onServiceStopped: (() -> Unit)? = null
+
     override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        audioEngine.onPlaybackComplete = {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+        }
     }
 
     override fun onStartCommand(
@@ -64,7 +71,8 @@ class SoundService : Service() {
         startId: Int,
     ): Int {
         if (intent?.action == ACTION_STOP) {
-            audioEngine.stop()
+            audioEngine.release()
+            onServiceStopped?.invoke()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
@@ -92,6 +100,12 @@ class SoundService : Service() {
     override fun onDestroy() {
         audioEngine.release()
         super.onDestroy()
+    }
+
+    fun updateNotification(noiseType: NoiseType) {
+        val notification = buildNotification(noiseType)
+        val manager = getSystemService(NotificationManager::class.java)
+        manager.notify(NOTIFICATION_ID, notification)
     }
 
     private fun createNotificationChannel() {

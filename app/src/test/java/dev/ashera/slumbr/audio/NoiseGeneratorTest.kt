@@ -37,7 +37,29 @@ class NoiseGeneratorTest {
         val samples = FloatArray(1000) { generator.nextSample() }
         val mean = samples.average()
         val variance = samples.map { (it - mean) * (it - mean) }.average()
-        assertTrue("White noise variance too low: $variance", variance > 0.1)
+        assertTrue("White noise variance too low: $variance", variance > 0.01)
+    }
+
+    @Test
+    fun `perceptual gain normalizes RMS levels across noise types`() {
+        val sampleCount = 50000
+
+        fun rms(type: NoiseType): Double {
+            val gen = NoiseGenerator(type)
+            val samples = FloatArray(sampleCount) { gen.nextSample() }
+            return kotlin.math.sqrt(samples.map { (it * it).toDouble() }.average())
+        }
+
+        val whiteRms = rms(NoiseType.WHITE)
+        val pinkRms = rms(NoiseType.PINK)
+        val brownRms = rms(NoiseType.BROWN)
+        val maxRms = maxOf(whiteRms, pinkRms, brownRms)
+        val minRms = minOf(whiteRms, pinkRms, brownRms)
+        // All noise types should be within 2x RMS of each other after gain correction
+        assertTrue(
+            "RMS spread too wide (white=$whiteRms, pink=$pinkRms, brown=$brownRms)",
+            maxRms / minRms < 2.0,
+        )
     }
 
     @Test

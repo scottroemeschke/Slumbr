@@ -11,6 +11,7 @@ data class SoundUiState(
     val selectedNoise: NoiseType? = null,
     val isPlaying: Boolean = false,
     val volume: Float = 0.8f,
+    val fadeProgress: Float = 0f,
 )
 
 class SoundViewModel : ViewModel() {
@@ -20,7 +21,8 @@ class SoundViewModel : ViewModel() {
     fun selectNoise(noiseType: NoiseType) {
         _uiState.update {
             if (it.selectedNoise == noiseType && it.isPlaying) {
-                it.copy(isPlaying = false, selectedNoise = null)
+                // Toggle off — keep selectedNoise so UI can show fade-out
+                it.copy(isPlaying = false)
             } else {
                 it.copy(selectedNoise = noiseType, isPlaying = true)
             }
@@ -32,7 +34,20 @@ class SoundViewModel : ViewModel() {
     }
 
     fun stop() {
-        _uiState.update { it.copy(isPlaying = false, selectedNoise = null) }
+        _uiState.update {
+            it.copy(isPlaying = false, selectedNoise = null, fadeProgress = 0f)
+        }
+    }
+
+    fun setFadeProgress(progress: Float) {
+        _uiState.update {
+            if (progress == 0f && !it.isPlaying) {
+                // Fade-out complete — clear selected noise
+                it.copy(fadeProgress = 0f, selectedNoise = null)
+            } else {
+                it.copy(fadeProgress = progress)
+            }
+        }
     }
 
     fun setPlaying(playing: Boolean) {

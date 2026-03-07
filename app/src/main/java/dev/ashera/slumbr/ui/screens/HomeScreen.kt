@@ -1,7 +1,5 @@
 package dev.ashera.slumbr.ui.screens
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,9 +19,9 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -78,7 +76,12 @@ fun HomeScreen(
             items(NoiseType.entries.toList()) { noiseType ->
                 NoiseCard(
                     noiseType = noiseType,
-                    isActive = uiState.isPlaying && uiState.selectedNoise == noiseType,
+                    fadeProgress =
+                        if (uiState.selectedNoise == noiseType) {
+                            uiState.fadeProgress
+                        } else {
+                            0f
+                        },
                     onClick = { onNoiseSelected(noiseType) },
                 )
             }
@@ -115,31 +118,23 @@ fun HomeScreen(
 @Composable
 private fun NoiseCard(
     noiseType: NoiseType,
-    isActive: Boolean,
+    fadeProgress: Float,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val containerColor by animateColorAsState(
-        targetValue =
-            if (isActive) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.surfaceContainer
-            },
-        animationSpec = tween(durationMillis = 300),
-        label = "cardColor",
-    )
+    val containerColor =
+        lerp(
+            MaterialTheme.colorScheme.surfaceContainer,
+            MaterialTheme.colorScheme.primary,
+            fadeProgress,
+        )
 
-    val contentColor by animateColorAsState(
-        targetValue =
-            if (isActive) {
-                MaterialTheme.colorScheme.onPrimary
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            },
-        animationSpec = tween(durationMillis = 300),
-        label = "textColor",
-    )
+    val contentColor =
+        lerp(
+            MaterialTheme.colorScheme.onSurface,
+            MaterialTheme.colorScheme.onPrimary,
+            fadeProgress,
+        )
 
     Card(
         onClick = onClick,

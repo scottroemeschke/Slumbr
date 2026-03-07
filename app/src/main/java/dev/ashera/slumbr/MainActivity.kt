@@ -21,15 +21,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import dev.ashera.slumbr.audio.NoiseType
 import dev.ashera.slumbr.service.SoundService
 import dev.ashera.slumbr.ui.screens.HomeScreen
 import dev.ashera.slumbr.ui.screens.SoundViewModel
 import dev.ashera.slumbr.ui.theme.SlumbrTheme
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val viewModel: SoundViewModel by viewModels()
     private var soundService: SoundService? = null
     private var bound = false
+    private var fadeProgressJob: Job? = null
 
     private val connection =
         object : ServiceConnection {
@@ -40,9 +45,21 @@ class MainActivity : ComponentActivity() {
                 val binder = service as SoundService.LocalBinder
                 soundService = binder.service
                 bound = true
+
+                binder.service.onServiceStopped = {
+                    viewModel.stop()
+                }
+
+                fadeProgressJob =
+                    lifecycleScope.launch {
+                        binder.service.audioEngine.fadeProgress.collect { progress ->
+                            viewModel.setFadeProgress(progress)
+                        }
+                    }
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
+                fadeProgressJob?.cancel()
                 soundService = null
                 bound = false
             }
@@ -70,13 +87,7 @@ class MainActivity : ComponentActivity() {
                     HomeScreen(
                         uiState = uiState,
                         onNoiseSelected = { noiseType ->
-                            viewModel.selectNoise(noiseType)
-                            val state = viewModel.uiState.value
-                            if (state.isPlaying && state.selectedNoise != null) {
-                                startSoundService(state.selectedNoise, state.volume)
-                            } else {
-                                stopSoundService()
-                            }
+                            handleNoiseSelected(noiseType)
                         },
                         onVolumeChanged = { volume ->
                             viewModel.setVolume(volume)
@@ -84,6 +95,31 @@ class MainActivity : ComponentActivity() {
                         },
                     )
                 }
+            }
+        }
+    }
+
+    private fun handleNoiseSelected(noiseType: NoiseType) {
+        val previousState = viewModel.uiState.value
+        viewModel.selectNoise(noiseType)
+        val newState = viewModel.uiState.value
+
+        when {
+            !newState.isPlaying -> {
+                // Toggle off — graceful fade-out
+                soundService?.audioEngine?.stop()
+                    ?: stopSoundService()
+            }
+            previousState.isPlaying && previousState.selectedNoise != noiseType -> {
+                // Switch noise type in-place
+                soundService?.let {
+                    it.audioEngine.switchNoise(noiseType)
+                    it.updateNotification(noiseType)
+                } ?: startSoundService(noiseType, newState.volume)
+            }
+            else -> {
+                // Start from stopped
+                startSoundService(noiseType, newState.volume)
             }
         }
     }
@@ -97,6 +133,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        fadeProgressJob?.cancel()
         if (bound) {
             unbindService(connection)
             bound = false
@@ -104,7 +141,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startSoundService(
-        noiseType: dev.ashera.slumbr.audio.NoiseType,
+        noiseType: NoiseType,
         volume: Float,
     ) {
         val intent = SoundService.startIntent(this, noiseType, volume)
