@@ -23,7 +23,7 @@ Open-source sleep sound generator — brown noise, white noise, pink noise, and 
 | Audio | Android AudioTrack API (low-level PCM generation) |
 | Background | Foreground Service with persistent notification |
 | Build | Gradle (Kotlin DSL), AGP 9.x |
-| Min SDK | 24 (Android 7.0) |
+| Min SDK | 28 (Android 9.0) |
 | Target SDK | 36 (Android 16) |
 
 ## Commands

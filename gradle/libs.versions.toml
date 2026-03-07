@@ -1,5 +1,5 @@
 [versions]
-agp = "8.9.1"
+agp = "9.1.0"
 kotlin = "2.3.10"
 coreKtx = "1.15.0"
 lifecycleRuntime = "2.8.7"
@@ -26,6 +26,5 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
