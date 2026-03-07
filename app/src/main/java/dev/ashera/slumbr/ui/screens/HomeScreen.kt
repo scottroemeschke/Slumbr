@@ -91,15 +91,16 @@ fun HomeScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             LazyVerticalGrid(
-                columns = GridCells.Fixed(1),
+                columns = GridCells.Fixed(2),
                 contentPadding = PaddingValues(0.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth().weight(1f),
             ) {
-                items(NoiseType.entries.toList()) { noiseType ->
+                items(NoiseType.entries.toList(), key = { it.name }) { noiseType ->
                     NoiseCard(
                         noiseType = noiseType,
                         isActive = uiState.isPlaying && uiState.selectedNoise == noiseType,
@@ -109,7 +110,7 @@ fun HomeScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = "Volume",
@@ -182,8 +183,8 @@ private fun NoiseCard(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(108.dp),
-        shape = RoundedCornerShape(20.dp),
+                .height(80.dp),
+        shape = RoundedCornerShape(16.dp),
         colors =
             CardDefaults.cardColors(
                 containerColor = containerColor,
@@ -194,12 +195,12 @@ private fun NoiseCard(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(20.dp),
+                    .padding(16.dp),
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
-                text = "${noiseType.displayName} Noise",
-                style = MaterialTheme.typography.titleLarge,
+                text = noiseType.displayName,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Start,
             )

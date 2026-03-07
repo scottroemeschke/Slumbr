@@ -165,7 +165,7 @@ class SoundService : Service() {
             MediaMetadataCompat
                 .Builder()
                 .putString(MediaMetadataCompat.METADATA_KEY_TITLE, getString(R.string.notification_title))
-                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "${noiseType.displayName} Noise")
+                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, noiseType.displayName)
                 .build()
         mediaSession?.setMetadata(metadata)
     }

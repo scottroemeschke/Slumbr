@@ -80,6 +80,18 @@ class NoiseGeneratorTest {
         }
     }
 
+    @Test
+    fun `createGenerator returns SoundGenerator that produces valid samples`() {
+        for (type in NoiseType.entries) {
+            val generator = type.createGenerator()
+            val buffer = FloatArray(1000)
+            generator.fillBuffer(buffer)
+            for (sample in buffer) {
+                assertTrue("$type: sample $sample out of range", sample in -1f..1f)
+            }
+        }
+    }
+
     /** Compute average sample-to-sample delta, normalizing out perceptualGain. */
     private fun avgSampleDelta(
         gen: NoiseGenerator,

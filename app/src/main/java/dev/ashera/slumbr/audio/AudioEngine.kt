@@ -38,7 +38,7 @@ class AudioEngine {
     private var targetGain = 0f
 
     @Volatile
-    private var generator: NoiseGenerator? = null
+    private var generator: SoundGenerator? = null
 
     private val _fadeProgress = MutableStateFlow(0f)
     val fadeProgress: StateFlow<Float> = _fadeProgress.asStateFlow()
@@ -53,7 +53,7 @@ class AudioEngine {
      * The new noise type plays at the current volume level seamlessly.
      */
     fun switchNoise(noiseType: NoiseType) {
-        generator = NoiseGenerator(noiseType)
+        generator = noiseType.createGenerator()
     }
 
     fun start(
@@ -68,7 +68,7 @@ class AudioEngine {
         track.play()
         audioTrack = track
 
-        generator = NoiseGenerator(noiseType)
+        generator = noiseType.createGenerator()
         targetGain = 1f
         _fadeProgress.value = 0f
 
