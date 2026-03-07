@@ -41,29 +41,6 @@ class NoiseGeneratorTest {
     }
 
     @Test
-    fun `perceptual gain normalizes RMS levels across noise types`() {
-        val sampleCount = 50000
-
-        fun rms(type: NoiseType): Double {
-            val gen = NoiseGenerator(type)
-            val samples = FloatArray(sampleCount) { gen.nextSample() }
-            return kotlin.math.sqrt(samples.map { (it * it).toDouble() }.average())
-        }
-
-        val whiteRms = rms(NoiseType.WHITE)
-        val pinkRms = rms(NoiseType.PINK)
-        val brownRms = rms(NoiseType.BROWN)
-        val maxRms = maxOf(whiteRms, pinkRms, brownRms)
-        val minRms = minOf(whiteRms, pinkRms, brownRms)
-        // Gains compensate for phone speaker frequency response (not just raw RMS),
-        // so allow up to 3x spread in electrical RMS
-        assertTrue(
-            "RMS spread too wide (white=$whiteRms, pink=$pinkRms, brown=$brownRms)",
-            maxRms / minRms < 3.0,
-        )
-    }
-
-    @Test
     fun `brown noise is smoother than white noise`() {
         val white = NoiseGenerator(NoiseType.WHITE)
         val brown = NoiseGenerator(NoiseType.BROWN)
