@@ -11,6 +11,7 @@ data class SoundUiState(
     val selectedNoise: NoiseType? = null,
     val isPlaying: Boolean = false,
     val volume: Float = 0.8f,
+    val instantTransition: Boolean = false,
 )
 
 class SoundViewModel : ViewModel() {
@@ -20,9 +21,15 @@ class SoundViewModel : ViewModel() {
     fun selectNoise(noiseType: NoiseType) {
         _uiState.update {
             if (it.selectedNoise == noiseType && it.isPlaying) {
-                it.copy(isPlaying = false, selectedNoise = null)
+                it.copy(isPlaying = false, selectedNoise = null, instantTransition = false)
             } else {
-                it.copy(selectedNoise = noiseType, isPlaying = true)
+                val switching =
+                    it.isPlaying && it.selectedNoise != null && it.selectedNoise != noiseType
+                it.copy(
+                    selectedNoise = noiseType,
+                    isPlaying = true,
+                    instantTransition = switching,
+                )
             }
         }
     }

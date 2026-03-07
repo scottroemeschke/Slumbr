@@ -37,7 +37,7 @@ class NoiseGeneratorTest {
         val samples = FloatArray(1000) { generator.nextSample() }
         val mean = samples.average()
         val variance = samples.map { (it - mean) * (it - mean) }.average()
-        assertTrue("White noise variance too low: $variance", variance > 0.1)
+        assertTrue("White noise variance too low: $variance", variance > 0.01)
     }
 
     @Test

@@ -6,19 +6,28 @@ import android.media.AudioTrack
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.max
 import kotlin.math.min
 
 /**
  * Low-level audio engine that generates and plays noise via AudioTrack.
- * Runs on a background coroutine. Supports fade in/out for smooth transitions.
+ * Runs on a background coroutine. Supports fade in/out for smooth transitions
+ * and seamless noise-type switching.
  */
 class AudioEngine {
     companion object {
         const val SAMPLE_RATE = 44100
-        private const val FADE_DURATION_MS = 2000L
-        private const val FADE_SAMPLES = (SAMPLE_RATE * FADE_DURATION_MS / 1000).toInt()
+        private const val FADE_IN_MS = 2000L
+        private const val FADE_OUT_MS = 16000L
+        private val FADE_IN_SAMPLES = (SAMPLE_RATE * FADE_IN_MS / 1000).toInt()
+        private val FADE_OUT_SAMPLES = (SAMPLE_RATE * FADE_OUT_MS / 1000).toInt()
+        private val GAIN_UP_STEP = 1f / FADE_IN_SAMPLES
+        private val GAIN_DOWN_STEP = 1f / FADE_OUT_SAMPLES
     }
 
     private var audioTrack: AudioTrack? = null
@@ -26,24 +35,43 @@ class AudioEngine {
     private val scope = CoroutineScope(Dispatchers.Default)
 
     @Volatile
-    private var fadingOut = false
+    private var targetGain = 0f
+
+    @Volatile
+    private var generator: NoiseGenerator? = null
+
+    private val _fadeProgress = MutableStateFlow(0f)
+    val fadeProgress: StateFlow<Float> = _fadeProgress.asStateFlow()
+
+    var onPlaybackComplete: (() -> Unit)? = null
 
     val isPlaying: Boolean
-        get() = playbackJob?.isActive == true && !fadingOut
+        get() = playbackJob?.isActive == true
+
+    /**
+     * Swap the noise generator in-place without any fade or restart.
+     * The new noise type plays at the current volume level seamlessly.
+     */
+    fun switchNoise(noiseType: NoiseType) {
+        generator = NoiseGenerator(noiseType)
+    }
 
     fun start(
         noiseType: NoiseType,
         volume: Float = 0.8f,
     ) {
-        stop()
+        playbackJob?.cancel()
+        audioTrack?.stop()
 
-        val bufferSize =
-            AudioTrack
-                .getMinBufferSize(
-                    SAMPLE_RATE,
-                    AudioFormat.CHANNEL_OUT_MONO,
-                    AudioFormat.ENCODING_PCM_FLOAT,
-                ).coerceAtLeast(SAMPLE_RATE) // At least 1 second buffer
+        val minBufferBytes =
+            AudioTrack.getMinBufferSize(
+                SAMPLE_RATE,
+                AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_FLOAT,
+            )
+        // At least 1 second of PCM float for stable playback without underruns
+        val oneSecondBytes = SAMPLE_RATE * Float.SIZE_BYTES
+        val bufferSizeBytes = maxOf(minBufferBytes, oneSecondBytes)
 
         val track =
             AudioTrack
@@ -61,82 +89,76 @@ class AudioEngine {
                         .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
                         .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                         .build(),
-                ).setBufferSizeInBytes(bufferSize * Float.SIZE_BYTES)
+                ).setBufferSizeInBytes(bufferSizeBytes)
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build()
 
         track.setVolume(volume)
         track.play()
         audioTrack = track
-        fadingOut = false
 
-        val generator = NoiseGenerator(noiseType)
+        generator = NoiseGenerator(noiseType)
+        targetGain = 1f
+        _fadeProgress.value = 0f
+
         val chunkSize = SAMPLE_RATE / 10 // 100ms chunks
         val buffer = FloatArray(chunkSize)
 
         playbackJob =
             scope.launch {
-                var totalSamples = 0L
+                var currentGain = 0f
 
-                while (isActive && !fadingOut) {
+                var gen = generator
+                while (isActive && gen != null) {
                     for (i in buffer.indices) {
-                        val sample = generator.nextSample()
-                        // Fade in: linear ramp over FADE_SAMPLES
-                        val fadeIn =
-                            if (totalSamples < FADE_SAMPLES) {
-                                totalSamples.toFloat() / FADE_SAMPLES
-                            } else {
-                                1f
+                        currentGain =
+                            when {
+                                currentGain < targetGain ->
+                                    min(currentGain + GAIN_UP_STEP, targetGain)
+                                currentGain > targetGain ->
+                                    max(currentGain - GAIN_DOWN_STEP, targetGain)
+                                else -> currentGain
                             }
-                        buffer[i] = sample * fadeIn
-                        totalSamples++
+                        buffer[i] = gen.nextSample() * smoothstep(currentGain)
                     }
-                    track.write(buffer, 0, buffer.size, AudioTrack.WRITE_BLOCKING)
-                }
 
-                // Fade out
-                if (fadingOut) {
-                    var fadeRemaining = FADE_SAMPLES
-                    while (fadeRemaining > 0 && isActive) {
-                        val samplesToWrite = min(chunkSize, fadeRemaining)
-                        for (i in 0 until samplesToWrite) {
-                            val sample = generator.nextSample()
-                            val fadeOut = fadeRemaining.toFloat() / FADE_SAMPLES
-                            buffer[i] = sample * fadeOut
-                            fadeRemaining--
-                        }
-                        track.write(buffer, 0, samplesToWrite, AudioTrack.WRITE_BLOCKING)
-                    }
+                    _fadeProgress.value = currentGain
+                    track.write(buffer, 0, buffer.size, AudioTrack.WRITE_BLOCKING)
+
+                    if (currentGain == 0f && targetGain == 0f) break
+                    gen = generator
                 }
 
                 track.stop()
                 track.release()
+
+                if (isActive) {
+                    // Natural completion (fade-out finished, not cancelled)
+                    if (audioTrack === track) audioTrack = null
+                    _fadeProgress.value = 0f
+                    onPlaybackComplete?.invoke()
+                }
             }
     }
 
+    /**
+     * Graceful stop — sets target gain to zero and lets the coroutine
+     * fade out over [FADE_OUT_MS] milliseconds.
+     */
     fun stop() {
-        if (playbackJob?.isActive == true) {
-            fadingOut = true
-            playbackJob?.invokeOnCompletion {
-                audioTrack = null
-                playbackJob = null
-            }
-        } else {
-            audioTrack?.let {
-                it.stop()
-                it.release()
-            }
-            audioTrack = null
-            playbackJob = null
-        }
+        targetGain = 0f
     }
 
     fun setVolume(volume: Float) {
         audioTrack?.setVolume(volume.coerceIn(0f, 1f))
     }
 
+    /** S-curve (3x²-2x³): eases in and out for natural-sounding fades. */
+    @Suppress("MagicNumber")
+    private fun smoothstep(x: Float): Float = x * x * (3f - 2f * x)
+
     fun release() {
-        fadingOut = false
+        targetGain = 0f
         playbackJob?.cancel()
         audioTrack?.let {
             it.stop()
@@ -144,5 +166,6 @@ class AudioEngine {
         }
         audioTrack = null
         playbackJob = null
+        _fadeProgress.value = 0f
     }
 }

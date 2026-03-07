@@ -27,6 +27,7 @@ class SoundService : Service() {
         private const val CHANNEL_ID = "slumbr_playback"
         private const val NOTIFICATION_ID = 1
         const val ACTION_STOP = "dev.ashera.slumbr.STOP"
+        const val ACTION_GRACEFUL_STOP = "dev.ashera.slumbr.GRACEFUL_STOP"
 
         fun startIntent(
             context: Context,
@@ -42,6 +43,11 @@ class SoundService : Service() {
             Intent(context, SoundService::class.java).apply {
                 action = ACTION_STOP
             }
+
+        fun gracefulStopIntent(context: Context): Intent =
+            Intent(context, SoundService::class.java).apply {
+                action = ACTION_GRACEFUL_STOP
+            }
     }
 
     inner class LocalBinder : Binder() {
@@ -51,47 +57,69 @@ class SoundService : Service() {
     private val binder = LocalBinder()
     val audioEngine = AudioEngine()
 
+    /** Called when the service is stopped via notification (hard stop). */
+    var onServiceStopped: (() -> Unit)? = null
+
     override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        audioEngine.onPlaybackComplete = {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+        }
     }
 
     override fun onStartCommand(
         intent: Intent?,
         flags: Int,
         startId: Int,
-    ): Int {
-        if (intent?.action == ACTION_STOP) {
-            audioEngine.stop()
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
-            return START_NOT_STICKY
+    ): Int =
+        when (intent?.action) {
+            ACTION_STOP -> {
+                audioEngine.release()
+                onServiceStopped?.invoke()
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+                START_NOT_STICKY
+            }
+            ACTION_GRACEFUL_STOP -> {
+                // Service self-stops via onPlaybackComplete when fade-out finishes
+                audioEngine.stop()
+                START_NOT_STICKY
+            }
+            else -> {
+                val noiseTypeName =
+                    intent?.getStringExtra("noise_type") ?: NoiseType.BROWN.name
+                val noiseType = NoiseType.valueOf(noiseTypeName)
+                val volume = intent?.getFloatExtra("volume", 0.8f) ?: 0.8f
+
+                val notification = buildNotification(noiseType)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    startForeground(
+                        NOTIFICATION_ID,
+                        notification,
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
+                    )
+                } else {
+                    startForeground(NOTIFICATION_ID, notification)
+                }
+
+                audioEngine.start(noiseType, volume)
+                START_NOT_STICKY
+            }
         }
-
-        val noiseTypeName = intent?.getStringExtra("noise_type") ?: NoiseType.BROWN.name
-        val noiseType = NoiseType.valueOf(noiseTypeName)
-        val volume = intent?.getFloatExtra("volume", 0.8f) ?: 0.8f
-
-        val notification = buildNotification(noiseType)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
-        }
-
-        audioEngine.start(noiseType, volume)
-        return START_NOT_STICKY
-    }
 
     override fun onDestroy() {
         audioEngine.release()
         super.onDestroy()
+    }
+
+    fun updateNotification(noiseType: NoiseType) {
+        val notification = buildNotification(noiseType)
+        val manager = getSystemService(NotificationManager::class.java)
+        manager.notify(NOTIFICATION_ID, notification)
     }
 
     private fun createNotificationChannel() {

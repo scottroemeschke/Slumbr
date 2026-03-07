@@ -99,13 +99,46 @@ Full workflow rules: `.claude/rules/linear-workflow.md`
 
 ---
 
+## Jetpack Compose UI Principles
+
+This project follows modern Compose-first patterns. **Always use context7 to look up current Compose/Material 3 APIs before writing UI code** — Compose evolves rapidly and stale patterns cause real bugs.
+
+### Animation
+- Use **declarative animations** (`animateColorAsState`, `animateFloatAsState`, `AnimatedVisibility`, `Crossfade`) driven by state changes — never tick-based updates from background threads
+- Compose's animation system runs at render frame rate (60fps+). Driving UI color/size from a `StateFlow` updated on a background thread (e.g., 10fps audio chunks) causes visible stutter
+- **Decouple visual animations from engine state.** Audio fade and UI fade should share duration/direction but each be handled by its own system (audio: coroutine gain ramp, UI: Compose `tween`/`spring`)
+- Use `tween()` for predictable time-based transitions, `spring()` for physics-based feel
+- Match animation durations to the real-world effect they represent (e.g., fade-out button color matches audio fade-out time)
+
+### State & Recomposition
+- Hoist state up — Composables should be stateless where possible, receiving state via parameters
+- Use `StateFlow` + `collectAsStateWithLifecycle()` for ViewModel → UI state
+- Use `remember` and `derivedStateOf` to minimize unnecessary recomposition
+- **Never** flow high-frequency updates (audio samples, timers) through ViewModel state — use Compose-local animation or `LaunchedEffect` instead
+- Prefer `val` over `var` in state classes; use `data class` with `copy()` for updates
+
+### Material 3
+- Use Material 3 components and theming (dynamic color where appropriate)
+- Follow M3 color roles: `primary`, `surfaceContainer`, `onSurface`, etc.
+- Use `MaterialTheme.typography` and `MaterialTheme.colorScheme` — never hardcode colors/fonts
+
+### Reference
+- **Official Compose docs**: developer.android.com/develop/ui/compose
+- **Animation guide**: developer.android.com/develop/ui/compose/animation/introduction
+- **State guide**: developer.android.com/develop/ui/compose/state
+- **Side effects**: developer.android.com/develop/ui/compose/side-effects
+- **Use context7** (`resolve-library-id` → `query-docs`) to look up current API signatures before using any Compose API you're not 100% sure about
+
 ## Audio Engine Design Principles
 
 - Generate noise algorithmically (PCM) — no audio file assets
 - Use `AudioTrack` in streaming mode for low-latency, low-memory playback
-- All noise generation runs on a background thread, never the UI thread
-- Fade in/out on start/stop (linear ramp over ~2 seconds) to avoid harsh transitions
-- Support concurrent noise mixing if multiple types selected
+- All noise generation runs on a background coroutine, never the UI thread
+- Target-gain model: `stop()` sets target to 0, playback loop naturally fades out per-sample
+- Fade in: 2s linear ramp. Fade out: 5s linear ramp. Smooth per-sample gain interpolation
+- Seamless noise switching: swap `NoiseGenerator` atomically, no restart or volume gap
+- Per-noise-type perceptual gain factors compensate for spectral energy distribution and phone speaker frequency response
+- Buffer size balances latency (fade responsiveness) vs stability (no underruns) — currently ~500ms
 
 ## Battery Optimization
 
@@ -113,7 +146,7 @@ Full workflow rules: `.claude/rules/linear-workflow.md`
 - Minimal wake locks — only audio-related
 - No network usage during playback
 - No unnecessary sensor or GPS access
-- Efficient PCM buffer sizes to balance latency vs CPU wake-ups
+- Buffer size tuned to balance latency vs CPU wake-ups (~500ms chunks written every ~100ms)
 
 ---
 
