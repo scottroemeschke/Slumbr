@@ -1,12 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- App name shown in launcher and system UI. Do not translate. -->
     <string name="app_name">Slumbr</string>
+    <!-- Notification channel name shown in Android system notification settings. Keep short and descriptive. -->
     <string name="notification_channel_name">Sleep Sounds</string>
+    <!-- Notification channel description shown in Android system notification settings. -->
     <string name="notification_channel_description">Playback controls for sleep sounds</string>
+    <!-- Title of the persistent playback notification shown while audio is playing. Do not translate — this is the app name. -->
     <string name="notification_title">Slumbr</string>
-    <string name="notification_text_playing">Playing %s noise</string>
+    <!-- Body text of the playback notification when a noise type is active. %s is the noise type name (e.g. "Brown", "White", "Pink"). -->
+    <string name="notification_text_playing">Playing <xliff:g id="noise_type" example="Brown">%s</xliff:g> noise</string>
+    <!-- Body text of the playback notification after sound has stopped or faded out. -->
     <string name="notification_text_stopped">Sound stopped</string>
+    <!-- Notification action button that starts a gradual fade-out of the audio. Keep short (1-2 words). -->
     <string name="action_fade_out">Fade Out</string>
+    <!-- Notification action button that immediately stops audio playback. Keep short (1 word). -->
     <string name="action_stop">Stop</string>
+    <!-- Warning shown when Android's Do Not Disturb mode with Total Silence is active, which may block audio playback. -->
     <string name="dnd_total_silence_warning">Do Not Disturb (Total Silence) is on — audio may be muted</string>
 </resources>
