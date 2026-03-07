@@ -69,8 +69,7 @@ class NoiseGeneratorTest {
     @Test
     fun `fillBuffer produces same range as nextSample`() {
         val sentinel = 2f
-        for (type in NoiseType.entries) {
-            if (type == NoiseType.BOX_FAN) continue // BoxFanGenerator tested separately
+        for (type in NOISE_GENERATOR_TYPES) {
             val generator = NoiseGenerator(type)
             val buffer = FloatArray(1000) { sentinel }
             generator.fillBuffer(buffer)
@@ -93,6 +92,11 @@ class NoiseGeneratorTest {
                 assertTrue("$type: sample $sample out of range", sample in -1f..1f)
             }
         }
+    }
+
+    companion object {
+        /** NoiseType entries that NoiseGenerator handles (excludes procedural sounds). */
+        private val NOISE_GENERATOR_TYPES = listOf(NoiseType.WHITE, NoiseType.PINK, NoiseType.BROWN)
     }
 
     /** Compute average sample-to-sample delta, normalizing out perceptualGain. */
