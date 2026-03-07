@@ -5,6 +5,7 @@ reviews:
   profile: "assertive"
   high_level_summary: false
   poem: false
+  in_progress_fortune: false
   review_status: true
   collapse_walkthrough: true
   changed_files_summary: true
