@@ -17,12 +17,16 @@ enum class NoiseType(
 
     /** Procedural waterfall — broadband wash with rumble and soft splash texture. */
     WATERFALL("Waterfall", 1.0f),
+
+    /** Procedural box fan — brown/pink noise blend with motor hum, housing resonances, slow AM. */
+    BOX_FAN("Box Fan", 1.0f),
     ;
 
     /** Create the [SoundGenerator] for this noise type. */
     fun createGenerator(): SoundGenerator =
         when (this) {
             WATERFALL -> WaterfallGenerator()
+            BOX_FAN -> BoxFanGenerator()
             else -> NoiseGenerator(this)
         }
 }
