@@ -106,8 +106,8 @@ class AudioEngine {
             scope.launch {
                 var currentGain = 0f
 
-                while (isActive) {
-                    val gen = generator ?: break
+                var gen = generator
+                while (isActive && gen != null) {
                     for (i in buffer.indices) {
                         currentGain =
                             when {
@@ -124,6 +124,7 @@ class AudioEngine {
                     track.write(buffer, 0, buffer.size, AudioTrack.WRITE_BLOCKING)
 
                     if (currentGain == 0f && targetGain == 0f) break
+                    gen = generator
                 }
 
                 track.stop()
@@ -150,7 +151,8 @@ class AudioEngine {
         audioTrack?.setVolume(volume.coerceIn(0f, 1f))
     }
 
-    /** Attempt S-curve: eases in and out for natural-sounding fades. */
+    /** S-curve (3x²-2x³): eases in and out for natural-sounding fades. */
+    @Suppress("MagicNumber")
     private fun smoothstep(x: Float): Float = x * x * (3f - 2f * x)
 
     fun release() {
