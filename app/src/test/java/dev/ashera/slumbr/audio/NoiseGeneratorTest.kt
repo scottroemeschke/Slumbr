@@ -4,7 +4,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class NoiseGeneratorTest {
-
     @Test
     fun `white noise produces samples in valid range`() {
         val generator = NoiseGenerator(NoiseType.WHITE)
@@ -61,7 +60,7 @@ class NoiseGeneratorTest {
         val brownDelta = avgDelta(brown)
         assertTrue(
             "Brown noise should be smoother (whiteDelta=$whiteDelta, brownDelta=$brownDelta)",
-            brownDelta < whiteDelta
+            brownDelta < whiteDelta,
         )
     }
 }
