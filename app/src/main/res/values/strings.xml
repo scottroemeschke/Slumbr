@@ -8,4 +8,5 @@
     <string name="notification_text_stopped">Sound stopped</string>
     <string name="action_fade_out">Fade Out</string>
     <string name="action_stop">Stop</string>
+    <string name="dnd_total_silence_warning">Do Not Disturb (Total Silence) is on — audio may be muted</string>
 </resources>

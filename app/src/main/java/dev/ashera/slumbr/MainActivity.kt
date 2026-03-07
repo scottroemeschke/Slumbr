@@ -1,6 +1,7 @@
 package dev.ashera.slumbr
 
 import android.Manifest
+import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -75,6 +76,7 @@ class MainActivity : ComponentActivity() {
 
                     HomeScreen(
                         uiState = uiState,
+                        snackbarMessages = viewModel.snackbarMessages,
                         onNoiseSelected = { noiseType ->
                             handleNoiseSelected(noiseType)
                         },
@@ -105,11 +107,23 @@ class MainActivity : ComponentActivity() {
                     it.audioEngine.switchNoise(noiseType)
                     it.updateNotification(noiseType)
                 } ?: startSoundService(noiseType, newState.volume)
+                checkDndTotalSilence()
             }
             else -> {
                 // Start from stopped
                 startSoundService(noiseType, newState.volume)
+                checkDndTotalSilence()
             }
+        }
+    }
+
+    private fun checkDndTotalSilence() {
+        val notificationManager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (notificationManager.currentInterruptionFilter ==
+            NotificationManager.INTERRUPTION_FILTER_NONE
+        ) {
+            viewModel.showSnackbar(getString(R.string.dnd_total_silence_warning))
         }
     }
 
