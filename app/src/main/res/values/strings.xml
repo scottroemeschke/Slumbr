@@ -8,8 +8,8 @@
     <string name="notification_channel_description">Playback controls for sleep sounds</string>
     <!-- Title of the persistent playback notification shown while audio is playing. Do not translate — this is the app name. -->
     <string name="notification_title">Slumbr</string>
-    <!-- Body text of the playback notification when a noise type is active. %s is the noise type name (e.g. "Brown", "White", "Pink"). -->
-    <string name="notification_text_playing">Playing <xliff:g id="noise_type" example="Brown">%s</xliff:g> noise</string>
+    <!-- Body text of the playback notification when a sound type is active. %s is the sound type name (e.g. "Brown Noise", "Rain"). -->
+    <string name="notification_text_playing">Playing <xliff:g id="sound_type" example="Brown Noise">%s</xliff:g></string>
     <!-- Body text of the playback notification after sound has stopped or faded out. -->
     <string name="notification_text_stopped">Sound stopped</string>
     <!-- Notification action button that starts a gradual fade-out of the audio. Keep short (1-2 words). -->

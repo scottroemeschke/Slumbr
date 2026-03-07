@@ -7,11 +7,15 @@ enum class NoiseType(
     val perceptualGain: Float,
 ) {
     /** Attenuated — low-pass shaped, gentle rolloff above ~4 kHz. */
-    WHITE("White", 0.44f),
+    WHITE("White Noise", 0.44f),
 
     /** Moderate attenuation — Voss-McCartney with gentle HF smoothing above ~6 kHz. */
-    PINK("Pink", 0.85f),
+    PINK("Pink Noise", 0.85f),
 
     /** Boosted — leaky integrator with high-pass at ~30 Hz and soft clipping. */
-    BROWN("Brown", 2.76f),
+    BROWN("Brown Noise", 2.76f),
+    ;
+
+    /** Create the [SoundGenerator] for this noise type. */
+    fun createGenerator(): SoundGenerator = NoiseGenerator(this)
 }
