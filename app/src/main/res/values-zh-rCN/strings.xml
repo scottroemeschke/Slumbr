@@ -16,4 +16,6 @@
     <string name="action_fade_out">淡出</string>
     <!-- 通知操作按钮，立即停止音频播放。请保持简短（1 个字）。 -->
     <string name="action_stop">停止</string>
+    <!-- 当 Android 勿扰模式（完全静音）开启时显示的警告，可能会阻止音频播放。 -->
+    <string name="dnd_total_silence_warning">勿扰模式（完全静音）已开启 — 音频可能被静音</string>
 </resources>

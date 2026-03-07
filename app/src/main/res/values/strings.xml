@@ -16,5 +16,6 @@
     <string name="action_fade_out">Fade Out</string>
     <!-- Notification action button that immediately stops audio playback. Keep short (1 word). -->
     <string name="action_stop">Stop</string>
+    <!-- Warning shown when Android's Do Not Disturb mode with Total Silence is active, which may block audio playback. -->
     <string name="dnd_total_silence_warning">Do Not Disturb (Total Silence) is on — audio may be muted</string>
 </resources>
