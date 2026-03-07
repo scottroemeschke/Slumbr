@@ -6,5 +6,6 @@
     <string name="notification_title">Slumbr</string>
     <string name="notification_text_playing">Playing %s</string>
     <string name="notification_text_stopped">Sound stopped</string>
+    <string name="action_fade_out">Fade Out</string>
     <string name="action_stop">Stop</string>
 </resources>

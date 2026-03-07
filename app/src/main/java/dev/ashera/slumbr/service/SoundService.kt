@@ -11,7 +11,11 @@ import android.content.pm.ServiceInfo
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat
 import androidx.core.app.NotificationCompat
+import androidx.media.app.NotificationCompat.MediaStyle
 import dev.ashera.slumbr.MainActivity
 import dev.ashera.slumbr.R
 import dev.ashera.slumbr.audio.AudioEngine
@@ -56,6 +60,7 @@ class SoundService : Service() {
 
     private val binder = LocalBinder()
     val audioEngine = AudioEngine()
+    private var mediaSession: MediaSessionCompat? = null
 
     /** Called when the service is stopped via notification (hard stop). */
     var onServiceStopped: (() -> Unit)? = null
@@ -65,7 +70,9 @@ class SoundService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        initMediaSession()
         audioEngine.onPlaybackComplete = {
+            updateMediaSessionState(PlaybackStateCompat.STATE_STOPPED)
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
@@ -80,6 +87,7 @@ class SoundService : Service() {
             ACTION_STOP -> {
                 audioEngine.release()
                 onServiceStopped?.invoke()
+                updateMediaSessionState(PlaybackStateCompat.STATE_STOPPED)
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
                 START_NOT_STICKY
@@ -106,12 +114,16 @@ class SoundService : Service() {
                     startForeground(NOTIFICATION_ID, notification)
                 }
 
+                updateMediaSessionState(PlaybackStateCompat.STATE_PLAYING)
+                updateMediaSessionMetadata(noiseType)
                 audioEngine.start(noiseType, volume)
                 START_NOT_STICKY
             }
         }
 
     override fun onDestroy() {
+        mediaSession?.release()
+        mediaSession = null
         audioEngine.release()
         super.onDestroy()
     }
@@ -120,6 +132,35 @@ class SoundService : Service() {
         val notification = buildNotification(noiseType)
         val manager = getSystemService(NotificationManager::class.java)
         manager.notify(NOTIFICATION_ID, notification)
+        updateMediaSessionMetadata(noiseType)
+    }
+
+    private fun initMediaSession() {
+        mediaSession = MediaSessionCompat(this, "SlumbrSession").apply {
+            setCallback(object : MediaSessionCompat.Callback() {
+                override fun onStop() {
+                    // Hardware stop button / "OK Google, stop"
+                    startService(stopIntent(this@SoundService))
+                }
+            })
+            isActive = true
+        }
+    }
+
+    private fun updateMediaSessionState(state: Int) {
+        val playbackState = PlaybackStateCompat.Builder()
+            .setActions(PlaybackStateCompat.ACTION_STOP)
+            .setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 0f)
+            .build()
+        mediaSession?.setPlaybackState(playbackState)
+    }
+
+    private fun updateMediaSessionMetadata(noiseType: NoiseType) {
+        val metadata = MediaMetadataCompat.Builder()
+            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, getString(R.string.notification_title))
+            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, noiseType.displayName)
+            .build()
+        mediaSession?.setMetadata(metadata)
     }
 
     private fun createNotificationChannel() {
@@ -146,10 +187,18 @@ class SoundService : Service() {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
 
-        val stopIntent =
+        val fadeOutIntent =
             PendingIntent.getService(
                 this,
                 1,
+                gracefulStopIntent(this),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+
+        val stopIntent =
+            PendingIntent.getService(
+                this,
+                2,
                 stopIntent(this),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
@@ -162,9 +211,21 @@ class SoundService : Service() {
             .setContentIntent(openIntent)
             .addAction(
                 android.R.drawable.ic_media_pause,
+                getString(R.string.action_fade_out),
+                fadeOutIntent,
+            )
+            .addAction(
+                android.R.drawable.ic_delete,
                 getString(R.string.action_stop),
                 stopIntent,
-            ).setOngoing(true)
+            )
+            .setStyle(
+                MediaStyle()
+                    .setMediaSession(mediaSession?.sessionToken)
+                    .setShowActionsInCompactView(0, 1),
+            )
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setOngoing(true)
             .setSilent(true)
             .build()
     }
