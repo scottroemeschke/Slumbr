@@ -45,8 +45,8 @@ class NoiseGeneratorTest {
         val white = NoiseGenerator(NoiseType.WHITE)
         val brown = NoiseGenerator(NoiseType.BROWN)
 
-        val whiteDelta = avgSampleDelta(white)
-        val brownDelta = avgSampleDelta(brown)
+        val whiteDelta = avgSampleDelta(white, NoiseType.WHITE.perceptualGain)
+        val brownDelta = avgSampleDelta(brown, NoiseType.BROWN.perceptualGain)
         assertTrue(
             "Brown noise should be smoother (whiteDelta=$whiteDelta, brownDelta=$brownDelta)",
             brownDelta < whiteDelta,
@@ -58,8 +58,8 @@ class NoiseGeneratorTest {
         val white = NoiseGenerator(NoiseType.WHITE)
         val pink = NoiseGenerator(NoiseType.PINK)
 
-        val whiteDelta = avgSampleDelta(white)
-        val pinkDelta = avgSampleDelta(pink)
+        val whiteDelta = avgSampleDelta(white, NoiseType.WHITE.perceptualGain)
+        val pinkDelta = avgSampleDelta(pink, NoiseType.PINK.perceptualGain)
         assertTrue(
             "Pink noise should be smoother than white (white=$whiteDelta, pink=$pinkDelta)",
             pinkDelta < whiteDelta,
@@ -68,21 +68,27 @@ class NoiseGeneratorTest {
 
     @Test
     fun `fillBuffer produces same range as nextSample`() {
+        val sentinel = 2f
         for (type in NoiseType.entries) {
             val generator = NoiseGenerator(type)
-            val buffer = FloatArray(1000)
+            val buffer = FloatArray(1000) { sentinel }
             generator.fillBuffer(buffer)
             for (sample in buffer) {
+                assertTrue("$type: sample still sentinel", sample != sentinel)
                 assertTrue("$type: sample $sample out of range", sample in -1f..1f)
             }
         }
     }
 
-    private fun avgSampleDelta(gen: NoiseGenerator): Double {
-        var prev = gen.nextSample()
+    /** Compute average sample-to-sample delta, normalizing out perceptualGain. */
+    private fun avgSampleDelta(
+        gen: NoiseGenerator,
+        gain: Float,
+    ): Double {
+        var prev = gen.nextSample() / gain
         var totalDelta = 0.0
         repeat(10000) {
-            val cur = gen.nextSample()
+            val cur = gen.nextSample() / gain
             totalDelta += kotlin.math.abs(cur - prev)
             prev = cur
         }
