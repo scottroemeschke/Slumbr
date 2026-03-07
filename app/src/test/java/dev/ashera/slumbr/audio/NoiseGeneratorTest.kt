@@ -82,11 +82,13 @@ class NoiseGeneratorTest {
 
     @Test
     fun `createGenerator returns SoundGenerator that produces valid samples`() {
+        val sentinel = Float.NaN
         for (type in NoiseType.entries) {
             val generator = type.createGenerator()
-            val buffer = FloatArray(1000)
+            val buffer = FloatArray(1000) { sentinel }
             generator.fillBuffer(buffer)
             for (sample in buffer) {
+                assertTrue("$type: sample still sentinel (NaN)", !sample.isNaN())
                 assertTrue("$type: sample $sample out of range", sample in -1f..1f)
             }
         }

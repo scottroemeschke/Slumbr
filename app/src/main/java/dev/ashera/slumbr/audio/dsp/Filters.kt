@@ -19,6 +19,9 @@ class LowPassFilter(
     private var state = 0f
 
     init {
+        require(sampleRate > 0) { "sampleRate must be positive" }
+        require(cutoffHz > 0f) { "cutoffHz must be positive" }
+        require(cutoffHz < sampleRate / 2f) { "cutoffHz must be below Nyquist ($sampleRate/2)" }
         val rc = 1f / (2f * PI.toFloat() * cutoffHz)
         val dt = 1f / sampleRate
         alpha = dt / (rc + dt)
@@ -47,6 +50,9 @@ class HighPassFilter(
     private var state = 0f
 
     init {
+        require(sampleRate > 0) { "sampleRate must be positive" }
+        require(cutoffHz > 0f) { "cutoffHz must be positive" }
+        require(cutoffHz < sampleRate / 2f) { "cutoffHz must be below Nyquist ($sampleRate/2)" }
         val rc = 1f / (2f * PI.toFloat() * cutoffHz)
         val dt = 1f / sampleRate
         alpha = rc / (rc + dt)
@@ -105,6 +111,10 @@ class BiquadFilter private constructor(
         q: Float,
         sampleRate: Int,
     ) {
+        require(sampleRate > 0) { "sampleRate must be positive" }
+        require(centerHz > 0f) { "centerHz must be positive" }
+        require(centerHz < sampleRate / 2f) { "centerHz must be below Nyquist ($sampleRate/2)" }
+        require(q > 0f) { "q must be positive" }
         val w0 = 2f * PI.toFloat() * centerHz / sampleRate
         val sinW0 = sin(w0)
         val cosW0 = cos(w0)

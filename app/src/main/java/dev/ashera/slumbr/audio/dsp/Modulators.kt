@@ -65,8 +65,9 @@ class ArEnvelope(
     private val releaseSamples: Int,
 ) {
     init {
-        require(attackSamples > 0) { "attackSamples must be positive" }
-        require(releaseSamples > 0) { "releaseSamples must be positive" }
+        require(attackSamples >= 0) { "attackSamples must not be negative" }
+        require(releaseSamples >= 0) { "releaseSamples must not be negative" }
+        require(attackSamples + releaseSamples > 0) { "total envelope length must be positive" }
     }
 
     private var position = 0
@@ -81,14 +82,28 @@ class ArEnvelope(
     val isActive: Boolean get() = active
 
     /** Returns envelope value in [0, 1], or 0 if inactive. */
+    @Suppress("MagicNumber")
     fun next(): Float {
         if (!active) return 0f
         val value =
-            if (position <= attackSamples) {
-                position.toFloat() / attackSamples
-            } else {
-                val releasePos = position - attackSamples
-                1f - releasePos.toFloat() / releaseSamples
+            when {
+                // Zero-length attack: start at peak immediately
+                attackSamples == 0 -> {
+                    1f - position.toFloat() / releaseSamples
+                }
+                // Zero-length release: drop to 0 immediately after attack
+                releaseSamples == 0 -> {
+                    position.toFloat() / attackSamples
+                }
+                // Normal attack phase
+                position < attackSamples -> {
+                    position.toFloat() / attackSamples
+                }
+                // Normal release phase
+                else -> {
+                    val releasePos = position - attackSamples
+                    1f - releasePos.toFloat() / releaseSamples
+                }
             }
         position++
         if (position >= totalSamples) {
