@@ -52,10 +52,14 @@ class NoiseGenerator(
 
     private fun brown(): Float {
         // Brownian/red noise: integrated white noise with leaky integrator
-        brownLast += Random.nextDouble(-1.0, 1.0) * 0.02
-        brownLast *= 0.998 // Gentle leak to prevent DC drift
-        // Soft clamp
+        brownLast += Random.nextDouble(-1.0, 1.0) * BROWN_STEP_SCALE
+        brownLast *= BROWN_LEAK_FACTOR
         brownLast = brownLast.coerceIn(-1.0, 1.0)
         return brownLast.toFloat()
+    }
+
+    companion object {
+        private const val BROWN_STEP_SCALE = 0.02
+        private const val BROWN_LEAK_FACTOR = 0.998
     }
 }
