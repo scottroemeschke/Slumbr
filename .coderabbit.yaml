@@ -18,6 +18,12 @@ reviews:
       - "WIP"
       - "DO NOT MERGE"
 
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+
   tools:
     detekt:
       enabled: true
