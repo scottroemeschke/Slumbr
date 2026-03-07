@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "dev.ashera.slumbr"
-        minSdk = 24
+        minSdk = 28
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
