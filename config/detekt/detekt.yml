@@ -18,5 +18,6 @@ naming:
 
 complexity:
   LongMethod:
-    # Compose UI builders are declarative and naturally longer
-    threshold: 80
+    threshold: 70
+    ignoreAnnotated:
+      - "Composable"
