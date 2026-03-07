@@ -34,17 +34,23 @@ Open-source sleep sound generator — brown noise, white noise, pink noise, and 
 ./gradlew assembleRelease        # Release APK
 ./gradlew installDebug           # Build + install on connected device
 
-# Quality
-./gradlew lint                   # Android lint
-./gradlew ktlintCheck            # Kotlin lint
-./gradlew ktlintFormat           # Kotlin format
+# Quality — run ALL of these before pushing (mirrors CI)
+./gradlew assembleDebug          # Build
 ./gradlew test                   # Unit tests
+./gradlew detekt                 # Static analysis (method length, complexity, etc.)
+./gradlew ktlintCheck            # Kotlin style lint
+./gradlew lint                   # Android lint
+
+# Deploy (WSL)
+bash scripts/deploy-local-from-wsl.sh  # Build + copy APK to Windows for device install
 
 # Info
 ./gradlew dependencies           # Dependency tree
 adb devices                      # List connected devices
 adb install app/build/outputs/apk/debug/app-debug.apk  # Manual install
 ```
+
+**Before pushing any branch**, always run the CI checks locally: `assembleDebug`, `test`, `detekt`, `ktlintCheck`, `lint`. All must pass.
 
 ## Directory Structure
 
@@ -135,10 +141,11 @@ This project follows modern Compose-first patterns. **Always use context7 to loo
 - Use `AudioTrack` in streaming mode for low-latency, low-memory playback
 - All noise generation runs on a background coroutine, never the UI thread
 - Target-gain model: `stop()` sets target to 0, playback loop naturally fades out per-sample
-- Fade in: 2s linear ramp. Fade out: 5s linear ramp. Smooth per-sample gain interpolation
+- Fade in: 2s ramp. Fade out: 16s ramp. Smooth per-sample gain interpolation with smoothstep S-curve
 - Seamless noise switching: swap `NoiseGenerator` atomically, no restart or volume gap
 - Per-noise-type perceptual gain factors compensate for spectral energy distribution and phone speaker frequency response
-- Buffer size balances latency (fade responsiveness) vs stability (no underruns) — currently ~500ms
+- 22,050 Hz sample rate, 16-bit PCM — noise needs no high-frequency fidelity or float precision
+- ~1 second chunks, ~3 second buffer — minimizes CPU wakes (1/sec) while preventing underruns
 
 ## Battery Optimization
 
@@ -146,7 +153,7 @@ This project follows modern Compose-first patterns. **Always use context7 to loo
 - Minimal wake locks — only audio-related
 - No network usage during playback
 - No unnecessary sensor or GPS access
-- Buffer size tuned to balance latency vs CPU wake-ups (~500ms chunks written every ~100ms)
+- ~1 sec chunks with ~3 sec buffer — CPU wakes once per second instead of 10x
 
 ---
 

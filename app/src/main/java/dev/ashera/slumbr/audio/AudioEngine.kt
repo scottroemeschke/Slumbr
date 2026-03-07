@@ -63,36 +63,7 @@ class AudioEngine {
         playbackJob?.cancel()
         audioTrack?.stop()
 
-        val minBufferBytes =
-            AudioTrack.getMinBufferSize(
-                SAMPLE_RATE,
-                AudioFormat.CHANNEL_OUT_MONO,
-                AudioFormat.ENCODING_PCM_16BIT,
-            )
-        // ~3 seconds of 16-bit PCM for stable playback with large chunks
-        val threeSecondBytes = SAMPLE_RATE * Short.SIZE_BYTES * 3
-        val bufferSizeBytes = maxOf(minBufferBytes, threeSecondBytes)
-
-        val track =
-            AudioTrack
-                .Builder()
-                .setAudioAttributes(
-                    AudioAttributes
-                        .Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build(),
-                ).setAudioFormat(
-                    AudioFormat
-                        .Builder()
-                        .setSampleRate(SAMPLE_RATE)
-                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                        .build(),
-                ).setBufferSizeInBytes(bufferSizeBytes)
-                .setTransferMode(AudioTrack.MODE_STREAM)
-                .build()
-
+        val track = buildAudioTrack()
         track.setVolume(volume)
         track.play()
         audioTrack = track
@@ -146,6 +117,37 @@ class AudioEngine {
                     onPlaybackComplete?.invoke()
                 }
             }
+    }
+
+    private fun buildAudioTrack(): AudioTrack {
+        val minBufferBytes =
+            AudioTrack.getMinBufferSize(
+                SAMPLE_RATE,
+                AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+            )
+        // ~3 seconds of 16-bit PCM for stable playback with large chunks
+        val threeSecondBytes = SAMPLE_RATE * Short.SIZE_BYTES * 3
+        val bufferSizeBytes = maxOf(minBufferBytes, threeSecondBytes)
+
+        return AudioTrack
+            .Builder()
+            .setAudioAttributes(
+                AudioAttributes
+                    .Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build(),
+            ).setAudioFormat(
+                AudioFormat
+                    .Builder()
+                    .setSampleRate(SAMPLE_RATE)
+                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                    .build(),
+            ).setBufferSizeInBytes(bufferSizeBytes)
+            .setTransferMode(AudioTrack.MODE_STREAM)
+            .build()
     }
 
     /**
