@@ -55,10 +55,11 @@ class NoiseGeneratorTest {
         val brownRms = rms(NoiseType.BROWN)
         val maxRms = maxOf(whiteRms, pinkRms, brownRms)
         val minRms = minOf(whiteRms, pinkRms, brownRms)
-        // All noise types should be within 2x RMS of each other after gain correction
+        // Gains compensate for phone speaker frequency response (not just raw RMS),
+        // so allow up to 3x spread in electrical RMS
         assertTrue(
             "RMS spread too wide (white=$whiteRms, pink=$pinkRms, brown=$brownRms)",
-            maxRms / minRms < 2.0,
+            maxRms / minRms < 3.0,
         )
     }
 

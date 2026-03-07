@@ -5,7 +5,7 @@ enum class NoiseType(
     /** Gain factor to normalize perceived loudness across noise colors. */
     val perceptualGain: Float,
 ) {
-    WHITE("White", 0.5f),
-    PINK("Pink", 0.8f),
-    BROWN("Brown", 1.6f),
+    WHITE("White", 0.35f),
+    PINK("Pink", 0.75f),
+    BROWN("Brown", 2.5f),
 }

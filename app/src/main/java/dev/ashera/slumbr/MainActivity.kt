@@ -21,20 +21,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.lifecycleScope
 import dev.ashera.slumbr.audio.NoiseType
 import dev.ashera.slumbr.service.SoundService
 import dev.ashera.slumbr.ui.screens.HomeScreen
 import dev.ashera.slumbr.ui.screens.SoundViewModel
 import dev.ashera.slumbr.ui.theme.SlumbrTheme
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val viewModel: SoundViewModel by viewModels()
     private var soundService: SoundService? = null
     private var bound = false
-    private var fadeProgressJob: Job? = null
 
     private val connection =
         object : ServiceConnection {
@@ -49,17 +45,9 @@ class MainActivity : ComponentActivity() {
                 binder.service.onServiceStopped = {
                     viewModel.stop()
                 }
-
-                fadeProgressJob =
-                    lifecycleScope.launch {
-                        binder.service.audioEngine.fadeProgress.collect { progress ->
-                            viewModel.setFadeProgress(progress)
-                        }
-                    }
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
-                fadeProgressJob?.cancel()
                 soundService = null
                 bound = false
             }
@@ -133,7 +121,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
-        fadeProgressJob?.cancel()
         if (bound) {
             unbindService(connection)
             bound = false

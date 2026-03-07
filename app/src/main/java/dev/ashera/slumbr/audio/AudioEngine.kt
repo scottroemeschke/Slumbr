@@ -23,7 +23,7 @@ class AudioEngine {
     companion object {
         const val SAMPLE_RATE = 44100
         private const val FADE_IN_MS = 2000L
-        private const val FADE_OUT_MS = 5000L
+        private const val FADE_OUT_MS = 16000L
         private val FADE_IN_SAMPLES = (SAMPLE_RATE * FADE_IN_MS / 1000).toInt()
         private val FADE_OUT_SAMPLES = (SAMPLE_RATE * FADE_OUT_MS / 1000).toInt()
         private val GAIN_UP_STEP = 1f / FADE_IN_SAMPLES
@@ -69,7 +69,7 @@ class AudioEngine {
                     SAMPLE_RATE,
                     AudioFormat.CHANNEL_OUT_MONO,
                     AudioFormat.ENCODING_PCM_FLOAT,
-                ).coerceAtLeast(SAMPLE_RATE)
+                ).coerceAtLeast(SAMPLE_RATE) // ~1s buffer for stable playback
 
         val track =
             AudioTrack
@@ -117,7 +117,7 @@ class AudioEngine {
                                     max(currentGain - GAIN_DOWN_STEP, targetGain)
                                 else -> currentGain
                             }
-                        buffer[i] = gen.nextSample() * currentGain
+                        buffer[i] = gen.nextSample() * smoothstep(currentGain)
                     }
 
                     _fadeProgress.value = currentGain
@@ -149,6 +149,9 @@ class AudioEngine {
     fun setVolume(volume: Float) {
         audioTrack?.setVolume(volume.coerceIn(0f, 1f))
     }
+
+    /** Attempt S-curve: eases in and out for natural-sounding fades. */
+    private fun smoothstep(x: Float): Float = x * x * (3f - 2f * x)
 
     fun release() {
         targetGain = 0f
