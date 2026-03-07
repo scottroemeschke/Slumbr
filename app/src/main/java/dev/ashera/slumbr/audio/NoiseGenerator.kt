@@ -1,12 +1,19 @@
 package dev.ashera.slumbr.audio
 
 import kotlin.math.min
+import kotlin.math.tanh
 import kotlin.random.Random
 
 /**
  * Generates PCM noise samples for different noise colors.
  * All generators produce mono float samples in [-1, 1].
+ *
+ * Each noise type includes spectral shaping for pleasant sleep/masking sound:
+ * - White: single-pole low-pass (~4 kHz) to roll off harsh highs
+ * - Pink: Voss-McCartney + single-pole low-pass (~6 kHz) to smooth top-end
+ * - Brown: leaky integrator + tanh soft clipping + high-pass (~30 Hz) for speaker safety
  */
+@Suppress("MagicNumber") // DSP constants are empirically tuned
 class NoiseGenerator(
     private val type: NoiseType,
 ) {
@@ -17,6 +24,11 @@ class NoiseGenerator(
     private val pinkOctaves = FloatArray(8)
     private var pinkCounter = 0
     private var pinkRunningSum = 0f
+
+    // Filter state
+    private var lpState = 0f
+    private var hpState = 0f
+    private var hpPrevInput = 0f
 
     init {
         for (i in pinkOctaves.indices) {
@@ -55,10 +67,15 @@ class NoiseGenerator(
         }
     }
 
-    private fun white(): Float = Random.nextFloat() * 2f - 1f
+    /** White noise through single-pole low-pass at ~4 kHz. */
+    private fun white(): Float {
+        val x = Random.nextFloat() * 2f - 1f
+        lpState += LP_ALPHA_WHITE * (x - lpState)
+        return lpState
+    }
 
+    /** Voss-McCartney pink noise through single-pole low-pass at ~6 kHz. */
     private fun pink(): Float {
-        // Voss-McCartney: update one octave per sample based on trailing zeros of counter
         val k = Integer.numberOfTrailingZeros(pinkCounter)
         val octave = min(k, pinkOctaves.size - 1)
         pinkRunningSum -= pinkOctaves[octave]
@@ -67,20 +84,36 @@ class NoiseGenerator(
         pinkRunningSum += newValue
         pinkCounter++
 
-        // Normalize: sum of 8 uniform [-1,1] has max magnitude 8
-        return pinkRunningSum / pinkOctaves.size
+        val raw = pinkRunningSum / pinkOctaves.size
+        lpState += LP_ALPHA_PINK * (raw - lpState)
+        return lpState
     }
 
+    /** Brown noise with soft clipping + high-pass at ~30 Hz. */
     private fun brown(): Float {
-        // Brownian/red noise: integrated white noise with leaky integrator
         brownLast += (Random.nextFloat() * 2f - 1f) * BROWN_STEP_SCALE
         brownLast *= BROWN_LEAK_FACTOR
-        brownLast = brownLast.coerceIn(-1f, 1f)
-        return brownLast
+        // Soft clip: tanh saturation instead of hard clamp
+        val clipped = tanh(brownLast.toDouble() * SOFT_CLIP_DRIVE).toFloat()
+        // Single-pole high-pass: removes sub-bass rumble
+        val hpOutput = HP_ALPHA_BROWN * (hpState + clipped - hpPrevInput)
+        hpPrevInput = clipped
+        hpState = hpOutput
+        return hpOutput
     }
 
     companion object {
         private const val BROWN_STEP_SCALE = 0.02f
         private const val BROWN_LEAK_FACTOR = 0.998f
+
+        // Single-pole low-pass: α = 2πfc/fs / (1 + 2πfc/fs)
+        private const val LP_ALPHA_WHITE = 0.53f // ~4 kHz cutoff at 22050 Hz
+        private const val LP_ALPHA_PINK = 0.63f // ~6 kHz cutoff at 22050 Hz
+
+        // Single-pole high-pass: α = 1 / (1 + 2πfc/fs)
+        private const val HP_ALPHA_BROWN = 0.991f // ~30 Hz cutoff at 22050 Hz
+
+        // tanh soft-clip drive — 1.5 gives gentle saturation
+        private const val SOFT_CLIP_DRIVE = 1.5
     }
 }
