@@ -12,12 +12,12 @@ kotlin {
 
 android {
     namespace = "dev.ashera.slumbr"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "dev.ashera.slumbr"
         minSdk = 28
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
     }
