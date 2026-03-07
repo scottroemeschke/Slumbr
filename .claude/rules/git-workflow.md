@@ -37,7 +37,27 @@ https://linear.app/slumbr/issue/SLU-YY
 - Commits and PRs require explicit user approval before executing
 - Default mindset: "should I open a PR?" not "let me push this"
 
+**GitHub PR Labels:**
+
+Every PR MUST have exactly one `type:` label and one `size:` label. Flag labels are additive.
+
+| Group | Labels |
+|-------|--------|
+| **Type** (pick one) | `type: feature`, `type: bugfix`, `type: improvement`, `type: tech-debt`, `type: docs`, `type: infra` |
+| **Size** (pick one) | `size: xs`, `size: s`, `size: m`, `size: l`, `size: xl` |
+| **Flags** (as needed) | `breaking`, `security`, `dependencies` |
+
+Size guide:
+- **xs** — trivial (typo, config tweak)
+- **s** — 1-2 files, straightforward
+- **m** — several files, some thought needed
+- **l** — cross-cutting changes
+- **xl** — architectural, high review effort
+
+Apply labels when creating the PR via `gh pr create --label "type: feature" --label "size: m"`.
+
 **Always:**
+- Apply `type:` and `size:` labels to every PR
 - Reference **every** related Linear issue in PR body using `Fixes SLU-XX` magic words
 - Include Linear issue URLs for human-clickable context
 - Move issues to **In Review** after PR creation
