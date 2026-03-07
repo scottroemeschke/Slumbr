@@ -1,0 +1,12 @@
+{
+    "mcpServers": {
+        "grep": {
+            "type": "http",
+            "url": "https://mcp.grep.app"
+        },
+        "linear-server": {
+            "type": "http",
+            "url": "https://mcp.linear.app/mcp"
+        }
+    }
+}

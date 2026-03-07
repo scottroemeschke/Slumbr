@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Slumbr</string>
+    <string name="notification_channel_name">Sleep Sounds</string>
+    <string name="notification_channel_description">Playback controls for sleep sounds</string>
+    <string name="notification_title">Slumbr</string>
+    <string name="notification_text_playing">Playing %s</string>
+    <string name="notification_text_stopped">Sound stopped</string>
+    <string name="action_stop">Stop</string>
+</resources>
