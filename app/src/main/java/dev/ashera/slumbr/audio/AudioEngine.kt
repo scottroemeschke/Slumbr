@@ -63,13 +63,15 @@ class AudioEngine {
         playbackJob?.cancel()
         audioTrack?.stop()
 
-        val bufferSize =
-            AudioTrack
-                .getMinBufferSize(
-                    SAMPLE_RATE,
-                    AudioFormat.CHANNEL_OUT_MONO,
-                    AudioFormat.ENCODING_PCM_FLOAT,
-                ).coerceAtLeast(SAMPLE_RATE) // ~1s buffer for stable playback
+        val minBufferBytes =
+            AudioTrack.getMinBufferSize(
+                SAMPLE_RATE,
+                AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_FLOAT,
+            )
+        // At least 1 second of PCM float for stable playback without underruns
+        val oneSecondBytes = SAMPLE_RATE * Float.SIZE_BYTES
+        val bufferSizeBytes = maxOf(minBufferBytes, oneSecondBytes)
 
         val track =
             AudioTrack
@@ -87,7 +89,7 @@ class AudioEngine {
                         .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
                         .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                         .build(),
-                ).setBufferSizeInBytes(bufferSize * Float.SIZE_BYTES)
+                ).setBufferSizeInBytes(bufferSizeBytes)
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build()
 

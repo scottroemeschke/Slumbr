@@ -48,6 +48,7 @@ class MainActivity : ComponentActivity() {
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
+                soundService?.onServiceStopped = null
                 soundService = null
                 bound = false
             }
@@ -96,7 +97,7 @@ class MainActivity : ComponentActivity() {
             !newState.isPlaying -> {
                 // Toggle off — graceful fade-out
                 soundService?.audioEngine?.stop()
-                    ?: stopSoundService()
+                    ?: gracefulStopSoundService()
             }
             previousState.isPlaying && previousState.selectedNoise != noiseType -> {
                 // Switch noise type in-place
@@ -121,6 +122,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        soundService?.onServiceStopped = null
         if (bound) {
             unbindService(connection)
             bound = false
@@ -135,8 +137,8 @@ class MainActivity : ComponentActivity() {
         ContextCompat.startForegroundService(this, intent)
     }
 
-    private fun stopSoundService() {
-        val intent = SoundService.stopIntent(this)
+    private fun gracefulStopSoundService() {
+        val intent = SoundService.gracefulStopIntent(this)
         startService(intent)
     }
 
