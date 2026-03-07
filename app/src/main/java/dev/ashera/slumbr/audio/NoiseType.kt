@@ -14,8 +14,15 @@ enum class NoiseType(
 
     /** Boosted — leaky integrator with high-pass at ~30 Hz and soft clipping. */
     BROWN("Brown Noise", 2.76f),
+
+    /** Procedural waterfall — broadband wash with rumble and soft splash texture. */
+    WATERFALL("Waterfall", 1.0f),
     ;
 
     /** Create the [SoundGenerator] for this noise type. */
-    fun createGenerator(): SoundGenerator = NoiseGenerator(this)
+    fun createGenerator(): SoundGenerator =
+        when (this) {
+            WATERFALL -> WaterfallGenerator()
+            else -> NoiseGenerator(this)
+        }
 }
