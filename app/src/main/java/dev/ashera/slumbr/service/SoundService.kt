@@ -136,30 +136,37 @@ class SoundService : Service() {
     }
 
     private fun initMediaSession() {
-        mediaSession = MediaSessionCompat(this, "SlumbrSession").apply {
-            setCallback(object : MediaSessionCompat.Callback() {
-                override fun onStop() {
-                    // Hardware stop button / "OK Google, stop"
-                    startService(stopIntent(this@SoundService))
-                }
-            })
-            isActive = true
-        }
+        mediaSession =
+            MediaSessionCompat(this, "SlumbrSession").apply {
+                setCallback(
+                    object : MediaSessionCompat.Callback() {
+                        override fun onStop() {
+                            // Hardware stop button / "OK Google, stop"
+                            startService(stopIntent(this@SoundService))
+                        }
+                    },
+                )
+                isActive = true
+            }
     }
 
     private fun updateMediaSessionState(state: Int) {
-        val playbackState = PlaybackStateCompat.Builder()
-            .setActions(PlaybackStateCompat.ACTION_STOP)
-            .setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 0f)
-            .build()
+        val playbackState =
+            PlaybackStateCompat
+                .Builder()
+                .setActions(PlaybackStateCompat.ACTION_STOP)
+                .setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 0f)
+                .build()
         mediaSession?.setPlaybackState(playbackState)
     }
 
     private fun updateMediaSessionMetadata(noiseType: NoiseType) {
-        val metadata = MediaMetadataCompat.Builder()
-            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, getString(R.string.notification_title))
-            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, noiseType.displayName)
-            .build()
+        val metadata =
+            MediaMetadataCompat
+                .Builder()
+                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, getString(R.string.notification_title))
+                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "${noiseType.displayName} Noise")
+                .build()
         mediaSession?.setMetadata(metadata)
     }
 
@@ -210,21 +217,18 @@ class SoundService : Service() {
             .setSmallIcon(android.R.drawable.ic_lock_silent_mode_off)
             .setContentIntent(openIntent)
             .addAction(
-                android.R.drawable.ic_media_pause,
+                R.drawable.ic_notification_fade_out,
                 getString(R.string.action_fade_out),
                 fadeOutIntent,
-            )
-            .addAction(
-                android.R.drawable.ic_delete,
+            ).addAction(
+                R.drawable.ic_notification_stop,
                 getString(R.string.action_stop),
                 stopIntent,
-            )
-            .setStyle(
+            ).setStyle(
                 MediaStyle()
                     .setMediaSession(mediaSession?.sessionToken)
                     .setShowActionsInCompactView(0, 1),
-            )
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            ).setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
             .setSilent(true)
             .build()
