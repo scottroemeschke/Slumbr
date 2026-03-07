@@ -57,15 +57,27 @@ fi
 
 SOURCE_CONTENT="$(cat "$SOURCE_FILE")"
 SOURCE_HASH="$(sha256sum "$SOURCE_FILE" | cut -d' ' -f1)"
+XLIFF_NS='xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"'
+
+validate_xml() {
+  python3 -c "
+import xml.etree.ElementTree as ET, sys
+try:
+    ET.fromstring(sys.stdin.read())
+except ET.ParseError as e:
+    print(f'XML parse error: {e}', file=sys.stderr)
+    sys.exit(1)
+" <<< "$1"
+}
 
 # Validate that source strings.xml has translation metadata before proceeding.
 # Run generate-metadata.sh first if this fails.
 validate_metadata() {
   local has_issues=false
 
-  # Check xliff namespace
-  if ! echo "$SOURCE_CONTENT" | grep -q 'xliff'; then
-    echo "ERROR: Source strings.xml missing xliff namespace declaration." >&2
+  # Require exact xliff namespace declaration
+  if ! echo "$SOURCE_CONTENT" | grep -qF "$XLIFF_NS"; then
+    echo "ERROR: Source strings.xml missing xliff namespace: $XLIFF_NS" >&2
     has_issues=true
   fi
 
@@ -75,9 +87,12 @@ validate_metadata() {
     has_issues=true
   fi
 
-  # Check for XML comments (translator context)
-  if ! echo "$SOURCE_CONTENT" | grep -q '<!--'; then
-    echo "ERROR: Source strings.xml has no XML comments for translator context." >&2
+  # Every <string> must have a preceding XML comment
+  local string_count comment_count
+  string_count="$(echo "$SOURCE_CONTENT" | grep -c '<string ' || true)"
+  comment_count="$(echo "$SOURCE_CONTENT" | grep -c '<!--' || true)"
+  if [[ "$string_count" -gt 0 && "$comment_count" -lt "$string_count" ]]; then
+    echo "ERROR: Source strings.xml has $string_count strings but only $comment_count comments. Every string needs a translator comment." >&2
     has_issues=true
   fi
 
@@ -169,11 +184,19 @@ $SOURCE_CONTENT
 PROMPT
 )"
 
+  # Pass 1: Translate
   local translation
   translation="$(claude -p "$translate_prompt" --model claude-sonnet-4-6 2>/dev/null)"
 
-  echo "$translation" > "$output_file"
-  echo "  Written: $output_file"
+  if [[ -z "$translation" ]]; then
+    echo "  ERROR: Claude returned empty translation. Skipping $locale." >&2
+    return 1
+  fi
+
+  if ! validate_xml "$translation"; then
+    echo "  ERROR: Initial translation is not valid XML. Skipping $locale." >&2
+    return 1
+  fi
 
   # Pass 2: Judge
   local verdict
@@ -184,13 +207,26 @@ PROMPT
     echo "  Warnings found, refining..."
     echo "$verdict" | sed 's/^/    /'
     translation="$(refine_translation "$locale" "$language" "$translation" "$verdict")"
+
+    if [[ -z "$translation" ]]; then
+      echo "  ERROR: Claude returned empty refinement. Skipping $locale." >&2
+      return 1
+    fi
+
+    if ! validate_xml "$translation"; then
+      echo "  ERROR: Refined translation is not valid XML. Skipping $locale." >&2
+      return 1
+    fi
+
     echo "$translation" > "$output_file"
     echo "  Refined: $output_file"
   else
     echo "  OK: No issues, skipping refinement."
+    echo "$translation" > "$output_file"
+    echo "  Written: $output_file"
   fi
 
-  # Store source hash so we can skip this locale next run
+  # Only store hash after successful write
   echo "$SOURCE_HASH" > "$hash_file"
 }
 

@@ -20,32 +20,44 @@ if ! command -v claude &>/dev/null; then
   exit 1
 fi
 
+XLIFF_NS='xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"'
+
+validate_xml() {
+  python3 -c "
+import xml.etree.ElementTree as ET, sys
+try:
+    ET.fromstring(sys.stdin.read())
+except ET.ParseError as e:
+    print(f'XML parse error: {e}', file=sys.stderr)
+    sys.exit(1)
+" < "$1"
+}
+
 # Check if a strings.xml has complete metadata:
-# 1. All format placeholders (%s, %d, etc.) wrapped in xliff:g tags
-# 2. XML comments above string entries
+# 1. xliff namespace declared
+# 2. All format placeholders (%s, %d, etc.) wrapped in xliff:g tags
+# 3. Every <string> has a preceding XML comment
 has_complete_metadata() {
   local file="$1"
   local content
   content="$(cat "$file")"
 
+  # Require explicit xliff namespace declaration
+  if ! echo "$content" | grep -qF "$XLIFF_NS"; then
+    return 1
+  fi
+
   # Check if any format placeholders exist without xliff:g wrapping
-  # Look for %s, %d, %1$s etc. that are NOT inside an xliff:g tag
   if echo "$content" | grep -P '%[0-9]*\$?[sdfu]' | grep -v 'xliff:g' | grep -q '<string'; then
     return 1
   fi
 
-  # Check if there are XML comments (at least one <!-- above a <string)
-  if ! echo "$content" | grep -q '<!--'; then
-    return 1
-  fi
-
-  # Count strings (excluding translatable="false") vs comments
+  # Every <string> must have a comment — require comment_count >= string_count
   local string_count comment_count
   string_count="$(echo "$content" | grep -c '<string ' || true)"
   comment_count="$(echo "$content" | grep -c '<!--' || true)"
 
-  # Every string should have a comment; allow some slack (at least 80%)
-  if [[ "$string_count" -gt 0 && "$comment_count" -lt $(( string_count * 80 / 100 )) ]]; then
+  if [[ "$string_count" -gt 0 && "$comment_count" -lt "$string_count" ]]; then
     return 1
   fi
 
@@ -83,10 +95,25 @@ $content
 PROMPT
 )"
 
-  local result
+  local result tmp_file
+  tmp_file="$(mktemp)"
   result="$(claude -p "$prompt" --model claude-sonnet-4-6 2>/dev/null)"
 
-  echo "$result" > "$file"
+  if [[ -z "$result" ]]; then
+    rm -f "$tmp_file"
+    echo "  ERROR: Claude returned empty output. Original file preserved." >&2
+    return 1
+  fi
+
+  echo "$result" > "$tmp_file"
+
+  if ! validate_xml "$tmp_file"; then
+    echo "  ERROR: Claude output is not valid XML. Original file preserved." >&2
+    echo "  Bad output saved to: $tmp_file" >&2
+    return 1
+  fi
+
+  mv "$tmp_file" "$file"
   echo "  Updated: $file"
 }
 

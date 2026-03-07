@@ -4,7 +4,7 @@ Slumbr uses Claude Code CLI (`claude -p`) to generate and maintain translations 
 
 ## Overview
 
-```
+```text
 Source strings.xml (English)
         │
         ▼
