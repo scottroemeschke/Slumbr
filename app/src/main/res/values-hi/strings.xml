@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- लॉन्चर और सिस्टम UI में दिखने वाला ऐप का नाम। अनुवाद न करें। -->
+    <string name="app_name">Slumbr</string>
+    <!-- Android सिस्टम नोटिफिकेशन सेटिंग्स में दिखने वाला नोटिफिकेशन चैनल का नाम। संक्षिप्त और स्पष्ट रखें। -->
+    <string name="notification_channel_name">नींद की आवाज़ें</string>
+    <!-- Android सिस्टम नोटिफिकेशन सेटिंग्स में दिखने वाला नोटिफिकेशन चैनल का विवरण। -->
+    <string name="notification_channel_description">नींद की आवाज़ों के लिए प्लेबैक नियंत्रण</string>
+    <!-- ऑडियो चलने के दौरान दिखने वाली स्थायी प्लेबैक नोटिफिकेशन का शीर्षक। अनुवाद न करें — यह ऐप का नाम है। -->
+    <string name="notification_title">Slumbr</string>
+    <!-- किसी नॉइज़ प्रकार के सक्रिय होने पर प्लेबैक नोटिफिकेशन का मुख्य पाठ। %s नॉइज़ प्रकार का नाम है (जैसे "Brown", "White", "Pink")। -->
+    <string name="notification_text_playing"><xliff:g id="noise_type" example="Brown">%s</xliff:g> नॉइज़ चल रही है</string>
+    <!-- आवाज़ बंद या फ़ेड आउट होने के बाद प्लेबैक नोटिफिकेशन का मुख्य पाठ। -->
+    <string name="notification_text_stopped">आवाज़ बंद हो गई</string>
+    <!-- नोटिफिकेशन एक्शन बटन जो ऑडियो को धीरे-धीरे फ़ेड आउट करता है। संक्षिप्त रखें (1-2 शब्द)। -->
+    <string name="action_fade_out">धीरे बंद करें</string>
+    <!-- नोटिफिकेशन एक्शन बटन जो ऑडियो प्लेबैक तुरंत बंद करता है। संक्षिप्त रखें (1 शब्द)। -->
+    <string name="action_stop">रोकें</string>
+</resources>

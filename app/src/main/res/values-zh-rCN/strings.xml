@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- 应用名称，显示在启动器和系统界面中。请勿翻译。 -->
+    <string name="app_name">Slumbr</string>
+    <!-- 通知渠道名称，显示在 Android 系统通知设置中。请保持简短清晰。 -->
+    <string name="notification_channel_name">睡眠音效</string>
+    <!-- 通知渠道描述，显示在 Android 系统通知设置中。 -->
+    <string name="notification_channel_description">睡眠音效的播放控制</string>
+    <!-- 音频播放时显示的常驻通知标题。请勿翻译——这是应用名称。 -->
+    <string name="notification_title">Slumbr</string>
+    <!-- 正在播放某种噪音类型时的通知正文。%s 为噪音类型名称（如"Brown"、"White"、"Pink"）。 -->
+    <string name="notification_text_playing">正在播放<xliff:g id="noise_type" example="Brown">%s</xliff:g>噪音</string>
+    <!-- 声音停止或淡出后的通知正文。 -->
+    <string name="notification_text_stopped">声音已停止</string>
+    <!-- 通知操作按钮，触发音频渐出。请保持简短（1-2 个字）。 -->
+    <string name="action_fade_out">淡出</string>
+    <!-- 通知操作按钮，立即停止音频播放。请保持简短（1 个字）。 -->
+    <string name="action_stop">停止</string>
+</resources>
