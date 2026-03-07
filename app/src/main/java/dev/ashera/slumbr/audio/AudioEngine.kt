@@ -93,8 +93,16 @@ class AudioEngine {
                                     max(currentGain - GAIN_DOWN_STEP, targetGain)
                                 else -> currentGain
                             }
+                        val shapedGain =
+                            if (targetGain == 0f) {
+                                // Cubic: fast initial drop, gentle tail toward silence
+                                currentGain * currentGain * currentGain
+                            } else {
+                                // Smoothstep S-curve for fade-in
+                                smoothstep(currentGain)
+                            }
                         pcmBuffer[i] =
-                            (floatBuffer[i] * smoothstep(currentGain) * Short.MAX_VALUE)
+                            (floatBuffer[i] * shapedGain * Short.MAX_VALUE)
                                 .toInt()
                                 .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
                                 .toShort()
