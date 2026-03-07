@@ -6,12 +6,12 @@ enum class NoiseType(
     /** Gain factor to normalize perceived loudness across noise colors. */
     val perceptualGain: Float,
 ) {
-    /** Attenuated — flat spectrum with strong HF energy sounds loudest on any speaker. */
-    WHITE("White", 0.35f),
+    /** Attenuated — low-pass shaped, gentle rolloff above ~4 kHz. */
+    WHITE("White", 0.44f),
 
-    /** Moderate attenuation — balanced spectrum, moderate perceived loudness. */
-    PINK("Pink", 0.75f),
+    /** Moderate attenuation — Voss-McCartney with gentle HF smoothing above ~6 kHz. */
+    PINK("Pink", 0.85f),
 
-    /** Boosted — most energy is in LF that phone speakers can't reproduce. */
-    BROWN("Brown", 2.5f),
+    /** Boosted — leaky integrator with high-pass at ~30 Hz and soft clipping. */
+    BROWN("Brown", 2.76f),
 }
