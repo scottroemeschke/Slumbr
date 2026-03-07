@@ -1,0 +1,23 @@
+# Detekt configuration — builds on default config (buildUponDefaultConfig = true)
+# Only overrides listed here; everything else uses detekt defaults.
+
+style:
+  MagicNumber:
+    # Color hex values, audio constants, and layout dimensions are fine as literals
+    ignorePropertyDeclaration: true
+    ignoreLocalVariableDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreAnnotated:
+      - "Composable"
+
+naming:
+  FunctionNaming:
+    # Compose @Composable functions use PascalCase by convention
+    ignoreAnnotated:
+      - "Composable"
+
+complexity:
+  LongMethod:
+    threshold: 70
+    ignoreAnnotated:
+      - "Composable"
