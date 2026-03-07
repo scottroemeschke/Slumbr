@@ -33,6 +33,7 @@ class NoiseGenerator(
             NoiseType.WHITE -> LowPassFilter(LP_CUTOFF_WHITE, AudioEngine.SAMPLE_RATE)
             NoiseType.PINK -> LowPassFilter(LP_CUTOFF_PINK, AudioEngine.SAMPLE_RATE)
             NoiseType.BROWN -> null
+            else -> error("NoiseGenerator does not support $type")
         }
     private val hpFilter =
         when (type) {
@@ -54,6 +55,7 @@ class NoiseGenerator(
                 NoiseType.WHITE -> white()
                 NoiseType.PINK -> pink()
                 NoiseType.BROWN -> brown()
+                else -> error("NoiseGenerator does not support $type")
             }
         return (raw * type.perceptualGain).coerceIn(-1f, 1f)
     }
@@ -74,6 +76,7 @@ class NoiseGenerator(
             NoiseType.BROWN -> for (i in buffer.indices) {
                 buffer[i] = (brown() * gain).coerceIn(-1f, 1f)
             }
+            else -> error("NoiseGenerator does not support $type")
         }
     }
 

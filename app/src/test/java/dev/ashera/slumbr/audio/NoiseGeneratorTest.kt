@@ -70,6 +70,7 @@ class NoiseGeneratorTest {
     fun `fillBuffer produces same range as nextSample`() {
         val sentinel = 2f
         for (type in NoiseType.entries) {
+            if (type == NoiseType.BOX_FAN) continue // BoxFanGenerator tested separately
             val generator = NoiseGenerator(type)
             val buffer = FloatArray(1000) { sentinel }
             generator.fillBuffer(buffer)

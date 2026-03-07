@@ -14,8 +14,15 @@ enum class NoiseType(
 
     /** Boosted — leaky integrator with high-pass at ~30 Hz and soft clipping. */
     BROWN("Brown Noise", 2.76f),
+
+    /** Procedural box fan — pink noise base with motor hum, housing resonances, slow AM. */
+    BOX_FAN("Box Fan", 1.0f),
     ;
 
     /** Create the [SoundGenerator] for this noise type. */
-    fun createGenerator(): SoundGenerator = NoiseGenerator(this)
+    fun createGenerator(): SoundGenerator =
+        when (this) {
+            BOX_FAN -> BoxFanGenerator()
+            else -> NoiseGenerator(this)
+        }
 }
