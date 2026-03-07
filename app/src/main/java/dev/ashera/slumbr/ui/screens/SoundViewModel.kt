@@ -2,8 +2,11 @@ package dev.ashera.slumbr.ui.screens
 
 import androidx.lifecycle.ViewModel
 import dev.ashera.slumbr.audio.NoiseType
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
@@ -17,6 +20,9 @@ data class SoundUiState(
 class SoundViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(SoundUiState())
     val uiState: StateFlow<SoundUiState> = _uiState.asStateFlow()
+
+    private val _snackbarMessages = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val snackbarMessages: SharedFlow<String> = _snackbarMessages.asSharedFlow()
 
     fun selectNoise(noiseType: NoiseType) {
         _uiState.update {
@@ -44,5 +50,9 @@ class SoundViewModel : ViewModel() {
 
     fun setPlaying(playing: Boolean) {
         _uiState.update { it.copy(isPlaying = playing) }
+    }
+
+    fun showSnackbar(message: String) {
+        _snackbarMessages.tryEmit(message)
     }
 }
