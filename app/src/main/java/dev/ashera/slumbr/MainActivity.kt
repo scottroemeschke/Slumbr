@@ -73,7 +73,7 @@ class MainActivity : ComponentActivity() {
                             viewModel.selectNoise(noiseType)
                             val state = viewModel.uiState.value
                             if (state.isPlaying && state.selectedNoise != null) {
-                                startSoundService(state.selectedNoise!!, state.volume)
+                                startSoundService(state.selectedNoise, state.volume)
                             } else {
                                 stopSoundService()
                             }
