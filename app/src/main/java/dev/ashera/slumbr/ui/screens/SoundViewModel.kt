@@ -14,7 +14,6 @@ data class SoundUiState(
 )
 
 class SoundViewModel : ViewModel() {
-
     private val _uiState = MutableStateFlow(SoundUiState())
     val uiState: StateFlow<SoundUiState> = _uiState.asStateFlow()
 

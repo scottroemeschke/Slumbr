@@ -15,7 +15,6 @@ import kotlin.math.min
  * Runs on a background coroutine. Supports fade in/out for smooth transitions.
  */
 class AudioEngine {
-
     companion object {
         const val SAMPLE_RATE = 44100
         private const val FADE_DURATION_MS = 2000L
@@ -32,32 +31,39 @@ class AudioEngine {
     val isPlaying: Boolean
         get() = playbackJob?.isActive == true && !fadingOut
 
-    fun start(noiseType: NoiseType, volume: Float = 0.8f) {
+    fun start(
+        noiseType: NoiseType,
+        volume: Float = 0.8f,
+    ) {
         stop()
 
-        val bufferSize = AudioTrack.getMinBufferSize(
-            SAMPLE_RATE,
-            AudioFormat.CHANNEL_OUT_MONO,
-            AudioFormat.ENCODING_PCM_FLOAT
-        ).coerceAtLeast(SAMPLE_RATE) // At least 1 second buffer
+        val bufferSize =
+            AudioTrack
+                .getMinBufferSize(
+                    SAMPLE_RATE,
+                    AudioFormat.CHANNEL_OUT_MONO,
+                    AudioFormat.ENCODING_PCM_FLOAT,
+                ).coerceAtLeast(SAMPLE_RATE) // At least 1 second buffer
 
-        val track = AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .build()
-            )
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setSampleRate(SAMPLE_RATE)
-                    .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .build()
-            )
-            .setBufferSizeInBytes(bufferSize * Float.SIZE_BYTES)
-            .setTransferMode(AudioTrack.MODE_STREAM)
-            .build()
+        val track =
+            AudioTrack
+                .Builder()
+                .setAudioAttributes(
+                    AudioAttributes
+                        .Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .build(),
+                ).setAudioFormat(
+                    AudioFormat
+                        .Builder()
+                        .setSampleRate(SAMPLE_RATE)
+                        .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
+                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                        .build(),
+                ).setBufferSizeInBytes(bufferSize * Float.SIZE_BYTES)
+                .setTransferMode(AudioTrack.MODE_STREAM)
+                .build()
 
         track.setVolume(volume)
         track.play()
@@ -68,42 +74,44 @@ class AudioEngine {
         val chunkSize = SAMPLE_RATE / 10 // 100ms chunks
         val buffer = FloatArray(chunkSize)
 
-        playbackJob = scope.launch {
-            var totalSamples = 0L
+        playbackJob =
+            scope.launch {
+                var totalSamples = 0L
 
-            while (isActive && !fadingOut) {
-                for (i in buffer.indices) {
-                    val sample = generator.nextSample()
-                    // Fade in: linear ramp over FADE_SAMPLES
-                    val fadeIn = if (totalSamples < FADE_SAMPLES) {
-                        totalSamples.toFloat() / FADE_SAMPLES
-                    } else {
-                        1f
-                    }
-                    buffer[i] = sample * fadeIn
-                    totalSamples++
-                }
-                track.write(buffer, 0, buffer.size, AudioTrack.WRITE_BLOCKING)
-            }
-
-            // Fade out
-            if (fadingOut) {
-                var fadeRemaining = FADE_SAMPLES
-                while (fadeRemaining > 0 && isActive) {
-                    val samplesToWrite = min(chunkSize, fadeRemaining)
-                    for (i in 0 until samplesToWrite) {
+                while (isActive && !fadingOut) {
+                    for (i in buffer.indices) {
                         val sample = generator.nextSample()
-                        val fadeOut = fadeRemaining.toFloat() / FADE_SAMPLES
-                        buffer[i] = sample * fadeOut
-                        fadeRemaining--
+                        // Fade in: linear ramp over FADE_SAMPLES
+                        val fadeIn =
+                            if (totalSamples < FADE_SAMPLES) {
+                                totalSamples.toFloat() / FADE_SAMPLES
+                            } else {
+                                1f
+                            }
+                        buffer[i] = sample * fadeIn
+                        totalSamples++
                     }
-                    track.write(buffer, 0, samplesToWrite, AudioTrack.WRITE_BLOCKING)
+                    track.write(buffer, 0, buffer.size, AudioTrack.WRITE_BLOCKING)
                 }
-            }
 
-            track.stop()
-            track.release()
-        }
+                // Fade out
+                if (fadingOut) {
+                    var fadeRemaining = FADE_SAMPLES
+                    while (fadeRemaining > 0 && isActive) {
+                        val samplesToWrite = min(chunkSize, fadeRemaining)
+                        for (i in 0 until samplesToWrite) {
+                            val sample = generator.nextSample()
+                            val fadeOut = fadeRemaining.toFloat() / FADE_SAMPLES
+                            buffer[i] = sample * fadeOut
+                            fadeRemaining--
+                        }
+                        track.write(buffer, 0, samplesToWrite, AudioTrack.WRITE_BLOCKING)
+                    }
+                }
+
+                track.stop()
+                track.release()
+            }
     }
 
     fun stop() {

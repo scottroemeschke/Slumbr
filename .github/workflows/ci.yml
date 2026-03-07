@@ -26,6 +26,9 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Kotlin lint
+        run: ./gradlew ktlintCheck
+
       - name: Android lint
         run: ./gradlew lint
 

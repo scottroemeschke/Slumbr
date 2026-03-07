@@ -23,24 +23,25 @@ import dev.ashera.slumbr.audio.NoiseType
  * optimization exemption.
  */
 class SoundService : Service() {
-
     companion object {
         private const val CHANNEL_ID = "slumbr_playback"
         private const val NOTIFICATION_ID = 1
         const val ACTION_STOP = "dev.ashera.slumbr.STOP"
 
-        fun startIntent(context: Context, noiseType: NoiseType, volume: Float): Intent {
-            return Intent(context, SoundService::class.java).apply {
+        fun startIntent(
+            context: Context,
+            noiseType: NoiseType,
+            volume: Float,
+        ): Intent =
+            Intent(context, SoundService::class.java).apply {
                 putExtra("noise_type", noiseType.name)
                 putExtra("volume", volume)
             }
-        }
 
-        fun stopIntent(context: Context): Intent {
-            return Intent(context, SoundService::class.java).apply {
+        fun stopIntent(context: Context): Intent =
+            Intent(context, SoundService::class.java).apply {
                 action = ACTION_STOP
             }
-        }
     }
 
     inner class LocalBinder : Binder() {
@@ -57,7 +58,11 @@ class SoundService : Service() {
         createNotificationChannel()
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    override fun onStartCommand(
+        intent: Intent?,
+        flags: Int,
+        startId: Int,
+    ): Int {
         if (intent?.action == ACTION_STOP) {
             audioEngine.stop()
             stopForeground(STOP_FOREGROUND_REMOVE)
@@ -74,7 +79,7 @@ class SoundService : Service() {
             startForeground(
                 NOTIFICATION_ID,
                 notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
             )
         } else {
             startForeground(NOTIFICATION_ID, notification)
@@ -91,36 +96,40 @@ class SoundService : Service() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                getString(R.string.notification_channel_name),
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = getString(R.string.notification_channel_description)
-                setSound(null, null)
-                enableVibration(false)
-            }
+            val channel =
+                NotificationChannel(
+                    CHANNEL_ID,
+                    getString(R.string.notification_channel_name),
+                    NotificationManager.IMPORTANCE_LOW,
+                ).apply {
+                    description = getString(R.string.notification_channel_description)
+                    setSound(null, null)
+                    enableVibration(false)
+                }
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
     }
 
     private fun buildNotification(noiseType: NoiseType): Notification {
-        val openIntent = PendingIntent.getActivity(
-            this,
-            0,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
+        val openIntent =
+            PendingIntent.getActivity(
+                this,
+                0,
+                Intent(this, MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
 
-        val stopIntent = PendingIntent.getService(
-            this,
-            1,
-            stopIntent(this),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
+        val stopIntent =
+            PendingIntent.getService(
+                this,
+                1,
+                stopIntent(this),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        return NotificationCompat
+            .Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.notification_title))
             .setContentText(getString(R.string.notification_text_playing, noiseType.displayName))
             .setSmallIcon(android.R.drawable.ic_lock_silent_mode_off)
@@ -128,9 +137,8 @@ class SoundService : Service() {
             .addAction(
                 android.R.drawable.ic_media_pause,
                 getString(R.string.action_stop),
-                stopIntent
-            )
-            .setOngoing(true)
+                stopIntent,
+            ).setOngoing(true)
             .setSilent(true)
             .build()
     }

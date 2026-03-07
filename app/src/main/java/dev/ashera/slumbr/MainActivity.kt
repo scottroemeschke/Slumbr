@@ -27,27 +27,31 @@ import dev.ashera.slumbr.ui.screens.SoundViewModel
 import dev.ashera.slumbr.ui.theme.SlumbrTheme
 
 class MainActivity : ComponentActivity() {
-
     private val viewModel: SoundViewModel by viewModels()
     private var soundService: SoundService? = null
     private var bound = false
 
-    private val connection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            val binder = service as SoundService.LocalBinder
-            soundService = binder.service
-            bound = true
+    private val connection =
+        object : ServiceConnection {
+            override fun onServiceConnected(
+                name: ComponentName?,
+                service: IBinder?,
+            ) {
+                val binder = service as SoundService.LocalBinder
+                soundService = binder.service
+                bound = true
+            }
+
+            override fun onServiceDisconnected(name: ComponentName?) {
+                soundService = null
+                bound = false
+            }
         }
 
-        override fun onServiceDisconnected(name: ComponentName?) {
-            soundService = null
-            bound = false
-        }
-    }
-
-    private val notificationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { /* Permission result — service works regardless */ }
+    private val notificationPermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission(),
+        ) { /* Permission result — service works regardless */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -99,7 +103,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun startSoundService(noiseType: dev.ashera.slumbr.audio.NoiseType, volume: Float) {
+    private fun startSoundService(
+        noiseType: dev.ashera.slumbr.audio.NoiseType,
+        volume: Float,
+    ) {
         val intent = SoundService.startIntent(this, noiseType, volume)
         ContextCompat.startForegroundService(this, intent)
     }

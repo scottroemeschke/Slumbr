@@ -38,9 +38,10 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(modifier = Modifier.height(80.dp))
@@ -56,11 +57,12 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = if (uiState.isPlaying && uiState.selectedNoise != null) {
-                "Playing ${uiState.selectedNoise.displayName} Noise"
-            } else {
-                "Tap a sound to begin"
-            },
+            text =
+                if (uiState.isPlaying && uiState.selectedNoise != null) {
+                    "Playing ${uiState.selectedNoise.displayName} Noise"
+                } else {
+                    "Tap a sound to begin"
+                },
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -94,14 +96,16 @@ fun HomeScreen(
         Slider(
             value = uiState.volume,
             onValueChange = onVolumeChanged,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp),
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-                inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            ),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+            colors =
+                SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ),
         )
 
         Spacer(modifier = Modifier.height(48.dp))
@@ -116,40 +120,45 @@ private fun NoiseCard(
     modifier: Modifier = Modifier,
 ) {
     val containerColor by animateColorAsState(
-        targetValue = if (isActive) {
-            MaterialTheme.colorScheme.primary
-        } else {
-            MaterialTheme.colorScheme.surfaceContainer
-        },
+        targetValue =
+            if (isActive) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.surfaceContainer
+            },
         animationSpec = tween(durationMillis = 300),
         label = "cardColor",
     )
 
     val contentColor by animateColorAsState(
-        targetValue = if (isActive) {
-            MaterialTheme.colorScheme.onPrimary
-        } else {
-            MaterialTheme.colorScheme.onSurface
-        },
+        targetValue =
+            if (isActive) {
+                MaterialTheme.colorScheme.onPrimary
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            },
         animationSpec = tween(durationMillis = 300),
         label = "textColor",
     )
 
     Card(
         onClick = onClick,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(88.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(88.dp),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = containerColor,
-            contentColor = contentColor,
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = containerColor,
+                contentColor = contentColor,
+            ),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(20.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(20.dp),
             verticalArrangement = Arrangement.Center,
         ) {
             Text(

@@ -7,8 +7,9 @@ import kotlin.random.Random
  * Generates PCM noise samples for different noise colors.
  * All generators produce mono float samples in [-1, 1].
  */
-class NoiseGenerator(private val type: NoiseType) {
-
+class NoiseGenerator(
+    private val type: NoiseType,
+) {
     // Brown noise state
     private var brownLast = 0.0
 
@@ -26,11 +27,12 @@ class NoiseGenerator(private val type: NoiseType) {
         }
     }
 
-    fun nextSample(): Float = when (type) {
-        NoiseType.WHITE -> white()
-        NoiseType.PINK -> pink()
-        NoiseType.BROWN -> brown()
-    }
+    fun nextSample(): Float =
+        when (type) {
+            NoiseType.WHITE -> white()
+            NoiseType.PINK -> pink()
+            NoiseType.BROWN -> brown()
+        }
 
     private fun white(): Float = Random.nextFloat() * 2f - 1f
 
