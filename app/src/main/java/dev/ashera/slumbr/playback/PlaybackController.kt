@@ -65,9 +65,4 @@ class PlaybackController
             audioEngine.release()
             _playbackState.update { PlaybackState() }
         }
-
-        fun release() {
-            audioEngine.release()
-            _playbackState.update { PlaybackState() }
-        }
     }

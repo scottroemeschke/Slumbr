@@ -35,11 +35,13 @@ class PlaybackMediaSessionManager
         }
 
         fun updateState(state: Int) {
+            val speed =
+                if (state == PlaybackStateCompat.STATE_PLAYING) 1f else 0f
             val playbackState =
                 PlaybackStateCompat
                     .Builder()
                     .setActions(PlaybackStateCompat.ACTION_STOP)
-                    .setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 0f)
+                    .setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, speed)
                     .build()
             mediaSession?.setPlaybackState(playbackState)
         }

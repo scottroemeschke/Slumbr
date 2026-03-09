@@ -21,6 +21,9 @@ import kotlin.math.min
  * Low-level audio engine that generates and plays noise via AudioTrack.
  * Runs on a background coroutine. Supports fade in/out for smooth transitions
  * and seamless noise-type switching.
+ *
+ * AudioTrack lifecycle is centralized in the playback coroutine to avoid
+ * concurrent stop/release races between the caller thread and the coroutine.
  */
 @Singleton
 class AudioEngine
@@ -66,8 +69,9 @@ class AudioEngine
             noiseType: NoiseType,
             volume: Float,
         ) {
+            // Cancel previous playback — the coroutine's finally block handles
+            // stopping and releasing the old AudioTrack.
             playbackJob?.cancel()
-            audioTrack?.stop()
 
             val track = buildAudioTrack()
             track.setVolume(volume)
@@ -84,51 +88,55 @@ class AudioEngine
 
             playbackJob =
                 scope.launch {
-                    var currentGain = 0f
+                    try {
+                        var currentGain = 0f
 
-                    var gen = generator
-                    while (isActive && gen != null) {
-                        gen.fillBuffer(floatBuffer)
+                        var gen = generator
+                        while (isActive && gen != null) {
+                            gen.fillBuffer(floatBuffer)
 
-                        for (i in floatBuffer.indices) {
-                            currentGain =
-                                when {
-                                    currentGain < targetGain ->
-                                        min(currentGain + GAIN_UP_STEP, targetGain)
-                                    currentGain > targetGain ->
-                                        max(currentGain - GAIN_DOWN_STEP, targetGain)
-                                    else -> currentGain
-                                }
-                            val shapedGain =
-                                if (targetGain == 0f) {
-                                    // Cubic: fast initial drop, gentle tail toward silence
-                                    currentGain * currentGain * currentGain
-                                } else {
-                                    // Smoothstep S-curve for fade-in
-                                    smoothstep(currentGain)
-                                }
-                            pcmBuffer[i] =
-                                (floatBuffer[i] * shapedGain * Short.MAX_VALUE)
-                                    .toInt()
-                                    .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
-                                    .toShort()
+                            for (i in floatBuffer.indices) {
+                                currentGain =
+                                    when {
+                                        currentGain < targetGain ->
+                                            min(currentGain + GAIN_UP_STEP, targetGain)
+                                        currentGain > targetGain ->
+                                            max(currentGain - GAIN_DOWN_STEP, targetGain)
+                                        else -> currentGain
+                                    }
+                                val shapedGain =
+                                    if (targetGain == 0f) {
+                                        // Cubic: fast initial drop, gentle tail toward silence
+                                        currentGain * currentGain * currentGain
+                                    } else {
+                                        // Smoothstep S-curve for fade-in
+                                        smoothstep(currentGain)
+                                    }
+                                pcmBuffer[i] =
+                                    (floatBuffer[i] * shapedGain * Short.MAX_VALUE)
+                                        .toInt()
+                                        .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+                                        .toShort()
+                            }
+
+                            _fadeProgress.value = currentGain
+                            track.write(pcmBuffer, 0, pcmBuffer.size, AudioTrack.WRITE_BLOCKING)
+
+                            if (currentGain == 0f && targetGain == 0f) break
+                            gen = generator
                         }
 
-                        _fadeProgress.value = currentGain
-                        track.write(pcmBuffer, 0, pcmBuffer.size, AudioTrack.WRITE_BLOCKING)
-
-                        if (currentGain == 0f && targetGain == 0f) break
-                        gen = generator
-                    }
-
-                    track.stop()
-                    track.release()
-
-                    if (isActive) {
-                        // Natural completion (fade-out finished, not cancelled)
+                        if (isActive) {
+                            // Natural completion (fade-out finished, not cancelled)
+                            _fadeProgress.value = 0f
+                            onPlaybackComplete?.invoke()
+                        }
+                    } finally {
+                        // Sole place that stops/releases the AudioTrack — avoids
+                        // concurrent cleanup races with release() or start().
+                        track.stop()
+                        track.release()
                         if (audioTrack === track) audioTrack = null
-                        _fadeProgress.value = 0f
-                        onPlaybackComplete?.invoke()
                     }
                 }
         }
@@ -183,11 +191,8 @@ class AudioEngine
         override fun release() {
             targetGain = 0f
             playbackJob?.cancel()
-            audioTrack?.let {
-                it.stop()
-                it.release()
-            }
-            audioTrack = null
+            // AudioTrack cleanup is handled by the coroutine's finally block.
+            // Just clear our references and reset state.
             playbackJob = null
             _fadeProgress.value = 0f
         }

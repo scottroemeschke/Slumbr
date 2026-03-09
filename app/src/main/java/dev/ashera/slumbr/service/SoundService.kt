@@ -94,7 +94,12 @@ class SoundService : Service() {
                 mediaSessionManager.updateMetadata(command.noiseType)
                 observePlaybackState()
             }
-            is PlaybackCommand.HardStop -> playbackController.hardStop()
+            is PlaybackCommand.HardStop -> {
+                playbackController.hardStop()
+                mediaSessionManager.updateState(PlaybackStateCompat.STATE_STOPPED)
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
             is PlaybackCommand.GracefulStop -> playbackController.gracefulStop()
             else -> {}
         }
