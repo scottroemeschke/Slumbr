@@ -50,7 +50,23 @@ adb devices                      # List connected devices
 adb install app/build/outputs/apk/debug/app-debug.apk  # Manual install
 ```
 
-**Before pushing any branch**, always run the CI checks locally: `assembleDebug`, `test`, `detekt`, `ktlintCheck`, `lint`. All must pass.
+**Before pushing any branch**, always run the CI checks locally: `check-core-boundary.py`, `assembleDebug`, `test`, `detekt`, `ktlintCheck`, `lint`. All must pass.
+
+## Architecture Boundary: `core/` vs `android/`
+
+All code under `dev.ashera.slumbr` is split into two top-level packages:
+
+- **`core/`** — Pure Kotlin. Zero `android.*`/`androidx.*` imports. Domain models, interfaces, audio engine interface, playback logic, DSP. Testable without Android SDK.
+- **`android/`** — Platform layer. Implements `core/` interfaces, owns all Android-specific code: Service, Activity, Compose UI, notifications, media session, DI, Intent handling.
+
+**Hard rules:**
+- `core/` MUST NOT import from `android.*`, `androidx.*`, or `dev.ashera.slumbr.android.*`
+- `android/` depends on `core/`, never the reverse
+- Interfaces live in `core/`; Android implementations live in `android/`
+- Platform concepts (Intents, Notifications, MediaSession) stay in `android/` — don't leak string constants, Intent parsing, or Android types into `core/`
+- Enforced by `scripts/check-core-boundary.py` in CI
+
+**When adding new code**, ask: "Does this need Android?" If no → `core/`. If yes → `android/`, implementing a `core/` interface if the abstraction is useful.
 
 ## Directory Structure
 
@@ -60,15 +76,24 @@ Slumbr/
 │   ├── src/
 │   │   ├── main/
 │   │   │   ├── java/dev/ashera/slumbr/
-│   │   │   │   ├── ui/           # Compose UI (screens, components, theme)
-│   │   │   │   ├── audio/        # Audio generation engine
-│   │   │   │   ├── service/      # Foreground service for background playback
-│   │   │   │   └── MainActivity.kt
+│   │   │   │   ├── core/         # Pure Kotlin — no Android imports
+│   │   │   │   │   ├── audio/    # AudioEngine interface, generators, DSP
+│   │   │   │   │   ├── playback/ # PlaybackCommand, PlaybackState, PlaybackController
+│   │   │   │   │   └── system/   # DndStateProvider interface
+│   │   │   │   └── android/      # Platform layer — Android implementations
+│   │   │   │       ├── audio/    # AudioTrackAudioEngine
+│   │   │   │       ├── service/  # SoundService, notifications, media session
+│   │   │   │       ├── system/   # AndroidDndStateProvider
+│   │   │   │       ├── ui/       # Compose screens, theme
+│   │   │   │       ├── di/       # Hilt DI module
+│   │   │   │       ├── MainActivity.kt
+│   │   │   │       └── SlumbrApplication.kt
 │   │   │   ├── res/              # Resources (icons, strings, etc.)
 │   │   │   └── AndroidManifest.xml
-│   │   └── test/                 # Unit tests
+│   │   └── test/                 # Unit tests (mirrors core/ and android/ structure)
 │   └── build.gradle.kts
 ├── gradle/                       # Gradle wrapper
+├── scripts/                      # CI scripts (check-core-boundary.py, etc.)
 ├── specs/                        # Feature specifications
 ├── docs/                         # Documentation
 ├── build.gradle.kts              # Root build file
