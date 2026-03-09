@@ -7,26 +7,25 @@ import android.support.v4.media.session.PlaybackStateCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.ashera.slumbr.R
 import dev.ashera.slumbr.audio.NoiseType
-import dev.ashera.slumbr.playback.PlaybackController
 import javax.inject.Inject
 
-class PlaybackMediaSessionManager
+class AndroidMediaSessionController
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
-    ) {
+    ) : MediaSessionController {
         private var mediaSession: MediaSessionCompat? = null
 
-        val sessionToken: MediaSessionCompat.Token?
+        override val sessionToken: MediaSessionCompat.Token?
             get() = mediaSession?.sessionToken
 
-        fun init(playbackController: PlaybackController) {
+        override fun initialize(onStop: () -> Unit) {
             mediaSession =
                 MediaSessionCompat(context, "SlumbrSession").apply {
                     setCallback(
                         object : MediaSessionCompat.Callback() {
                             override fun onStop() {
-                                playbackController.hardStop()
+                                onStop()
                             }
                         },
                     )
@@ -34,19 +33,18 @@ class PlaybackMediaSessionManager
                 }
         }
 
-        fun updateState(state: Int) {
-            val speed =
-                if (state == PlaybackStateCompat.STATE_PLAYING) 1f else 0f
+        override fun updatePlaying(noiseType: NoiseType) {
             val playbackState =
                 PlaybackStateCompat
                     .Builder()
                     .setActions(PlaybackStateCompat.ACTION_STOP)
-                    .setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, speed)
-                    .build()
+                    .setState(
+                        PlaybackStateCompat.STATE_PLAYING,
+                        PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+                        1f,
+                    ).build()
             mediaSession?.setPlaybackState(playbackState)
-        }
 
-        fun updateMetadata(noiseType: NoiseType) {
             val metadata =
                 MediaMetadataCompat
                     .Builder()
@@ -58,7 +56,20 @@ class PlaybackMediaSessionManager
             mediaSession?.setMetadata(metadata)
         }
 
-        fun release() {
+        override fun updateStopped() {
+            val playbackState =
+                PlaybackStateCompat
+                    .Builder()
+                    .setActions(PlaybackStateCompat.ACTION_STOP)
+                    .setState(
+                        PlaybackStateCompat.STATE_STOPPED,
+                        PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+                        0f,
+                    ).build()
+            mediaSession?.setPlaybackState(playbackState)
+        }
+
+        override fun release() {
             mediaSession?.release()
             mediaSession = null
         }

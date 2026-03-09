@@ -6,7 +6,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.support.v4.media.session.MediaSessionCompat
 import androidx.core.app.NotificationCompat
 import androidx.media.app.NotificationCompat.MediaStyle
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -15,17 +14,13 @@ import dev.ashera.slumbr.R
 import dev.ashera.slumbr.audio.NoiseType
 import javax.inject.Inject
 
-class PlaybackNotificationManager
+class AndroidPlaybackNotifier
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
-    ) {
-        companion object {
-            const val CHANNEL_ID = "slumbr_playback"
-            const val NOTIFICATION_ID = 1
-        }
-
-        fun createChannel() {
+        private val mediaSessionController: MediaSessionController,
+    ) : PlaybackNotifier {
+        override fun createChannel() {
             val channel =
                 NotificationChannel(
                     CHANNEL_ID,
@@ -40,10 +35,7 @@ class PlaybackNotificationManager
             manager.createNotificationChannel(channel)
         }
 
-        fun buildNotification(
-            noiseType: NoiseType,
-            mediaSessionToken: MediaSessionCompat.Token?,
-        ): Notification {
+        override fun buildNotification(noiseType: NoiseType): Notification {
             val openIntent =
                 PendingIntent.getActivity(
                     context,
@@ -85,7 +77,7 @@ class PlaybackNotificationManager
                     stopIntent,
                 ).setStyle(
                     MediaStyle()
-                        .setMediaSession(mediaSessionToken)
+                        .setMediaSession(mediaSessionController.sessionToken)
                         .setShowActionsInCompactView(0, 1),
                 ).setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setOngoing(true)
@@ -93,12 +85,14 @@ class PlaybackNotificationManager
                 .build()
         }
 
-        fun updateNotification(
-            noiseType: NoiseType,
-            mediaSessionToken: MediaSessionCompat.Token?,
-        ) {
-            val notification = buildNotification(noiseType, mediaSessionToken)
+        override fun updateNotification(noiseType: NoiseType) {
+            val notification = buildNotification(noiseType)
             val manager = context.getSystemService(NotificationManager::class.java)
             manager.notify(NOTIFICATION_ID, notification)
+        }
+
+        companion object {
+            const val CHANNEL_ID = "slumbr_playback"
+            const val NOTIFICATION_ID = 1
         }
     }

@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
-import android.support.v4.media.session.PlaybackStateCompat
 import dagger.hilt.android.AndroidEntryPoint
 import dev.ashera.slumbr.audio.NoiseType
 import dev.ashera.slumbr.playback.PlaybackCommand
@@ -23,9 +22,6 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class SoundService : Service() {
     companion object {
-        const val ACTION_STOP = "dev.ashera.slumbr.STOP"
-        const val ACTION_GRACEFUL_STOP = "dev.ashera.slumbr.GRACEFUL_STOP"
-
         fun startIntent(
             context: Context,
             noiseType: NoiseType,
@@ -38,30 +34,31 @@ class SoundService : Service() {
 
         fun stopIntent(context: Context): Intent =
             Intent(context, SoundService::class.java).apply {
-                action = ACTION_STOP
+                action = PlaybackCommand.ACTION_STOP
             }
 
         fun gracefulStopIntent(context: Context): Intent =
             Intent(context, SoundService::class.java).apply {
-                action = ACTION_GRACEFUL_STOP
+                action = PlaybackCommand.ACTION_GRACEFUL_STOP
             }
     }
 
     @Inject lateinit var playbackController: PlaybackController
 
-    @Inject lateinit var notificationManager: PlaybackNotificationManager
+    @Inject lateinit var notifier: PlaybackNotifier
 
-    @Inject lateinit var mediaSessionManager: PlaybackMediaSessionManager
+    @Inject lateinit var mediaSessionController: MediaSessionController
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private var observing = false
+    private var isForeground = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
-        notificationManager.createChannel()
-        mediaSessionManager.init(playbackController)
+        notifier.createChannel()
+        mediaSessionController.initialize { playbackController.handleCommand(PlaybackCommand.HardStop) }
+        observePlaybackState()
     }
 
     override fun onStartCommand(
@@ -69,79 +66,53 @@ class SoundService : Service() {
         flags: Int,
         startId: Int,
     ): Int {
-        when (val command = PlaybackCommand.from(intent)) {
-            is PlaybackCommand.Start -> {
-                // Start audio before observing state — ensures isPlaying=true
-                // before the observer's first emission (prevents immediate stopSelf).
-                // Idempotent: no-op if ViewModel already started playback.
-                playbackController.start(command.noiseType, command.volume)
-
-                val notification =
-                    notificationManager.buildNotification(
-                        command.noiseType,
-                        mediaSessionManager.sessionToken,
-                    )
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    startForeground(
-                        PlaybackNotificationManager.NOTIFICATION_ID,
-                        notification,
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
-                    )
-                } else {
-                    startForeground(PlaybackNotificationManager.NOTIFICATION_ID, notification)
-                }
-                mediaSessionManager.updateState(PlaybackStateCompat.STATE_PLAYING)
-                mediaSessionManager.updateMetadata(command.noiseType)
-                observePlaybackState()
-            }
-            is PlaybackCommand.HardStop -> {
-                playbackController.hardStop()
-                mediaSessionManager.updateState(PlaybackStateCompat.STATE_STOPPED)
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
-            }
-            is PlaybackCommand.GracefulStop -> playbackController.gracefulStop()
-            else -> {}
-        }
+        playbackController.handleCommand(PlaybackCommand.from(intent))
         return START_NOT_STICKY
     }
 
     override fun onDestroy() {
         serviceScope.cancel()
-        mediaSessionManager.release()
+        mediaSessionController.release()
         super.onDestroy()
     }
 
     private fun observePlaybackState() {
-        if (observing) return
-        observing = true
-
         serviceScope.launch {
             playbackController.playbackState
-                .map { it.currentNoise }
+                .map { it.currentNoise to it.isPlaying }
                 .distinctUntilChanged()
-                .collect { noiseType ->
-                    if (noiseType != null) {
-                        notificationManager.updateNotification(
-                            noiseType,
-                            mediaSessionManager.sessionToken,
-                        )
-                        mediaSessionManager.updateMetadata(noiseType)
+                .collect { (noiseType, isPlaying) ->
+                    when {
+                        isPlaying && noiseType != null -> {
+                            mediaSessionController.updatePlaying(noiseType)
+                            if (!isForeground) {
+                                promoteForeground(noiseType)
+                            } else {
+                                notifier.updateNotification(noiseType)
+                            }
+                        }
+                        !isPlaying && isForeground -> {
+                            mediaSessionController.updateStopped()
+                            stopForeground(STOP_FOREGROUND_REMOVE)
+                            isForeground = false
+                            stopSelf()
+                        }
                     }
                 }
         }
+    }
 
-        serviceScope.launch {
-            playbackController.playbackState
-                .map { it.isPlaying }
-                .distinctUntilChanged()
-                .collect { isPlaying ->
-                    if (!isPlaying) {
-                        mediaSessionManager.updateState(PlaybackStateCompat.STATE_STOPPED)
-                        stopForeground(STOP_FOREGROUND_REMOVE)
-                        stopSelf()
-                    }
-                }
+    private fun promoteForeground(noiseType: NoiseType) {
+        val notification = notifier.buildNotification(noiseType)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                AndroidPlaybackNotifier.NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
+            )
+        } else {
+            startForeground(AndroidPlaybackNotifier.NOTIFICATION_ID, notification)
         }
+        isForeground = true
     }
 }

@@ -89,4 +89,40 @@ class PlaybackControllerTest {
         assertNull(state.currentNoise)
         assertEquals(0f, state.fadeProgress)
     }
+
+    @Test
+    fun `handleCommand Start delegates to start`() {
+        controller.handleCommand(PlaybackCommand.Start(NoiseType.PINK, 0.7f))
+
+        val state = controller.playbackState.value
+        assertTrue(state.isPlaying)
+        assertEquals(NoiseType.PINK, state.currentNoise)
+        assertEquals(NoiseType.PINK, fakeEngine.startedNoiseType)
+        assertEquals(0.7f, fakeEngine.startedVolume)
+    }
+
+    @Test
+    fun `handleCommand GracefulStop delegates to gracefulStop`() {
+        controller.start(NoiseType.WHITE, 0.8f)
+        controller.handleCommand(PlaybackCommand.GracefulStop)
+
+        assertTrue(fakeEngine.stopCalled)
+        assertTrue(controller.playbackState.value.isPlaying)
+    }
+
+    @Test
+    fun `handleCommand HardStop delegates to hardStop`() {
+        controller.start(NoiseType.BROWN, 0.8f)
+        controller.handleCommand(PlaybackCommand.HardStop)
+
+        assertFalse(controller.playbackState.value.isPlaying)
+        assertTrue(fakeEngine.releaseCalled)
+    }
+
+    @Test
+    fun `handleCommand null is no-op`() {
+        controller.handleCommand(null)
+
+        assertFalse(controller.playbackState.value.isPlaying)
+    }
 }
