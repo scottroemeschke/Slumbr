@@ -1,12 +1,12 @@
 package dev.ashera.slumbr.playback
 
-import dev.ashera.slumbr.audio.AudioEngineContract
+import dev.ashera.slumbr.audio.AudioEngine
 import dev.ashera.slumbr.audio.NoiseType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class FakeAudioEngine : AudioEngineContract {
+class FakeAudioEngine : AudioEngine {
     private val _fadeProgress = MutableStateFlow(0f)
     override val fadeProgress: StateFlow<Float> = _fadeProgress.asStateFlow()
     override var onPlaybackComplete: (() -> Unit)? = null

@@ -1,6 +1,6 @@
 package dev.ashera.slumbr.playback
 
-import dev.ashera.slumbr.audio.AudioEngineContract
+import dev.ashera.slumbr.audio.AudioEngine
 import dev.ashera.slumbr.audio.NoiseType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,7 +17,7 @@ import javax.inject.Singleton
 class PlaybackController
     @Inject
     constructor(
-        private val audioEngine: AudioEngineContract,
+        private val audioEngine: AudioEngine,
     ) {
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         private val _playbackState = MutableStateFlow(PlaybackState())
@@ -64,5 +64,14 @@ class PlaybackController
         fun hardStop() {
             audioEngine.release()
             _playbackState.update { PlaybackState() }
+        }
+
+        fun handleCommand(command: PlaybackCommand?) {
+            when (command) {
+                is PlaybackCommand.Start -> start(command.noiseType, command.volume)
+                is PlaybackCommand.GracefulStop -> gracefulStop()
+                is PlaybackCommand.HardStop -> hardStop()
+                null -> {}
+            }
         }
     }
