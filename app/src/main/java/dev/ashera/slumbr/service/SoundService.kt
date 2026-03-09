@@ -1,5 +1,6 @@
 package dev.ashera.slumbr.service
 
+import android.app.Notification
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -14,13 +15,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class SoundService : Service() {
+class SoundService :
+    Service(),
+    ForegroundHost {
     companion object {
         fun startIntent(
             context: Context,
@@ -49,8 +49,9 @@ class SoundService : Service() {
 
     @Inject lateinit var mediaSessionController: MediaSessionController
 
+    @Inject lateinit var playbackObserver: ServicePlaybackObserver
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private var isForeground = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -58,7 +59,7 @@ class SoundService : Service() {
         super.onCreate()
         notifier.createChannel()
         mediaSessionController.initialize { playbackController.handleCommand(PlaybackCommand.HardStop) }
-        observePlaybackState()
+        playbackObserver.observe(serviceScope, this)
     }
 
     override fun onStartCommand(
@@ -76,34 +77,7 @@ class SoundService : Service() {
         super.onDestroy()
     }
 
-    private fun observePlaybackState() {
-        serviceScope.launch {
-            playbackController.playbackState
-                .map { it.currentNoise to it.isPlaying }
-                .distinctUntilChanged()
-                .collect { (noiseType, isPlaying) ->
-                    when {
-                        isPlaying && noiseType != null -> {
-                            mediaSessionController.updatePlaying(noiseType)
-                            if (!isForeground) {
-                                promoteForeground(noiseType)
-                            } else {
-                                notifier.updateNotification(noiseType)
-                            }
-                        }
-                        !isPlaying && isForeground -> {
-                            mediaSessionController.updateStopped()
-                            stopForeground(STOP_FOREGROUND_REMOVE)
-                            isForeground = false
-                            stopSelf()
-                        }
-                    }
-                }
-        }
-    }
-
-    private fun promoteForeground(noiseType: NoiseType) {
-        val notification = notifier.buildNotification(noiseType)
+    override fun promoteForeground(notification: Notification) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 AndroidPlaybackNotifier.NOTIFICATION_ID,
@@ -113,6 +87,10 @@ class SoundService : Service() {
         } else {
             startForeground(AndroidPlaybackNotifier.NOTIFICATION_ID, notification)
         }
-        isForeground = true
+    }
+
+    override fun demoteForeground() {
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 }

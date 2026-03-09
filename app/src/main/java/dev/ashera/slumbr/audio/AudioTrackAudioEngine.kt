@@ -194,6 +194,7 @@ class AudioTrackAudioEngine
             // AudioTrack cleanup is handled by the coroutine's finally block.
             // Just clear our references and reset state.
             playbackJob = null
+            generator = null
             _fadeProgress.value = 0f
         }
     }
