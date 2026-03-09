@@ -12,7 +12,7 @@ subprojects {
     extensions.configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
         buildUponDefaultConfig = true
         parallel = true
-        config.setFrom(rootProject.files("config/detekt/detekt.yml"))
+        config.setFrom(rootProject.files(".config/detekt/detekt.yml"))
         basePath = rootProject.projectDir.absolutePath
     }
 }
