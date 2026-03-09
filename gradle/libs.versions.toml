@@ -9,7 +9,7 @@ junit = "4.13.2"
 detekt = "1.23.8"
 ktlint = "14.1.0"
 material3 = "1.4.0"
-androidxMedia = "1.7.0"
+androidxMedia = "1.7.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
