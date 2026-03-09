@@ -52,7 +52,9 @@ class ModulatorsTest {
     @Test
     fun `DriftModulator varies over time`() {
         val drift = DriftModulator(1f, sampleRate)
-        val samples = FloatArray(sampleRate) { drift.next() }
+        // Use 5 seconds of samples to give the random walk enough time to vary
+        val sampleCount = sampleRate * 5
+        val samples = FloatArray(sampleCount) { drift.next() }
         val min = samples.min()
         val max = samples.max()
         assertTrue(
