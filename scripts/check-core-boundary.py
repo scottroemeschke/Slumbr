@@ -20,7 +20,7 @@ ANDROID_PKG_IMPORT = re.compile(r"^\s*import\s+dev\.ashera\.slumbr\.android\.")
 
 def check_file(path: Path) -> list[str]:
     violations: list[str] = []
-    for lineno, line in enumerate(path.read_text().splitlines(), start=1):
+    for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
         if ANDROID_SDK_IMPORT.match(line):
             violations.append(f"  {path}:{lineno}  {line.strip()}")
         elif ANDROID_PKG_IMPORT.match(line):
