@@ -38,6 +38,9 @@ class PlaybackController
             noiseType: NoiseType,
             volume: Float,
         ) {
+            // Idempotent: ViewModel calls this for immediate UI feedback,
+            // then Service calls it again to ensure audio starts even without ViewModel.
+            if (_playbackState.value.isPlaying) return
             audioEngine.start(noiseType, volume)
             _playbackState.update {
                 PlaybackState(isPlaying = true, currentNoise = noiseType, fadeProgress = 0f)

@@ -18,5 +18,6 @@ abstract class AppModule {
     abstract fun bindAudioEngine(impl: AudioEngine): AudioEngineContract
 
     @Binds
+    @Singleton
     abstract fun bindDndStateProvider(impl: AndroidDndStateProvider): DndStateProvider
 }

@@ -6,6 +6,7 @@ import android.media.AudioTrack
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,7 +38,7 @@ class AudioEngine
 
         private var audioTrack: AudioTrack? = null
         private var playbackJob: Job? = null
-        private val scope = CoroutineScope(Dispatchers.Default)
+        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
         @Volatile
         private var targetGain = 0f

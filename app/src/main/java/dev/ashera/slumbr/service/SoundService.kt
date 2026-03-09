@@ -32,8 +32,8 @@ class SoundService : Service() {
             volume: Float,
         ): Intent =
             Intent(context, SoundService::class.java).apply {
-                putExtra("noise_type", noiseType.name)
-                putExtra("volume", volume)
+                putExtra(PlaybackCommand.EXTRA_NOISE_TYPE, noiseType.name)
+                putExtra(PlaybackCommand.EXTRA_VOLUME, volume)
             }
 
         fun stopIntent(context: Context): Intent =
@@ -71,6 +71,11 @@ class SoundService : Service() {
     ): Int {
         when (val command = PlaybackCommand.from(intent)) {
             is PlaybackCommand.Start -> {
+                // Start audio before observing state — ensures isPlaying=true
+                // before the observer's first emission (prevents immediate stopSelf).
+                // Idempotent: no-op if ViewModel already started playback.
+                playbackController.start(command.noiseType, command.volume)
+
                 val notification =
                     notificationManager.buildNotification(
                         command.noiseType,
